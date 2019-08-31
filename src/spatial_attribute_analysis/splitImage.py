@@ -5,7 +5,7 @@ import os
 from glob import glob 
 from PIL import Image
 
-root_path = '/home/pi/Projects/Model_Interpretability/BrainTumorModelAnalysis/src/spatial_attribute_analysis/dense'
+root_path = './URESNET'
 paths = glob(root_path + '/*.png')
 
 for i, img_path in enumerate(paths):

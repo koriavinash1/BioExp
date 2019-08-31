@@ -5,7 +5,6 @@ import numpy as np
 from losses import *
 import random
 from keras.models import Model
-from extract_patches import Pipeline
 from scipy.misc import imresize
 from keras.utils import np_utils
 import SimpleITK as sitk
@@ -26,7 +25,7 @@ from imgaug import parameters as iap
 path_HGG = glob('/home/pi/Projects/beyondsegmentation/HGG/**')
 path_LGG = glob('/home/pi/Projects/beyondsegmentation/LGG**')
 
-test_path=glob('/home/parth/Interpretable_ML/BraTS_2018/train/**')
+test_path= path_HGG # glob('/home/parth/Interpretable_ML/BraTS_2018/train/**')
 np.random.seed(2022)
 np.random.shuffle(test_path)
 
@@ -124,7 +123,7 @@ class Test_Time_Augmentation():
         for i in range(iterations):
 
             aug_image = self.aug.augment_images(test_image)
-            predictions.append(model.predict(test_image.reshape((1, 240, 240, 4))))
+            predictions.append(model.predict(test_image[None, ...]))
             
         predictions = np.array(predictions)
         
@@ -145,57 +144,62 @@ class Test_Time_Augmentation():
 
 
 if __name__ == '__main__':
+    list_ = []
+    for volume in [32, 20, 24, 53, 12, 14]:
+        for slice_ in range(20, 140, 5):
+            test_image, gt = load_vol(test_path[volume], 'dense', slice_)
 
-    for volume in [32]:
+            model = load_model('/home/pi/Projects/BioExp/trained_models/densedrop/densedrop.h5', 
+                custom_objects={'gen_dice_loss':gen_dice_loss,'dice_whole_metric':dice_whole_metric,'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
+            model.load_weights('/home/pi/Projects/BioExp/trained_models/densedrop/model_lrsch.hdf5', by_name = True)
 
-        test_image, gt = load_vol(test_path[volume], 'res', 78)
+            # predict classes of each pixel based on the model
+            # prediction = model.predict(test_image.reshape((1, 240, 240, 4)), batch_size=1)   
+            
+            # prediction_not_reshaped = prediction.copy()
+            # prediction = np.argmax(prediction, axis=-1)
+            # prediction=prediction.astype(np.uint8)
+            # #reconstruct the initial target values .i.e. 0,1,2,4 for prediction and ground truth
+            # prediction[prediction==3]=4
+            # plt.imshow(prediction.reshape((240, 240)))
+            # plt.show()
 
-        model = load_model('/home/parth/Interpretable_ML/Brain-tumor-segmentation/checkpoints/Unet_MC/UnetRes_MC.h5', 
-            custom_objects={'gen_dice_loss':gen_dice_loss,'dice_whole_metric':dice_whole_metric,'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
-        model.load_weights('/home/parth/Interpretable_ML/Brain-tumor-segmentation/checkpoints/Unet_MC/UnetRes.60_1.066.hdf5', by_name = True)
+            D = Test_Time_Augmentation()
 
-        # predict classes of each pixel based on the model
-        # prediction = model.predict(test_image.reshape((1, 240, 240, 4)), batch_size=1)   
-        
-        # prediction_not_reshaped = prediction.copy()
-        # prediction = np.argmax(prediction, axis=-1)
-        # prediction=prediction.astype(np.uint8)
-        # #reconstruct the initial target values .i.e. 0,1,2,4 for prediction and ground truth
-        # prediction[prediction==3]=4
-        # plt.imshow(prediction.reshape((240, 240)))
-        # plt.show()
+            mean, var = D.predict_aleatoric(model, test_image, iterations = 50, dropout = 0.2)
+      
+            print (np.mean(var, axis=(0,1,2)))
+            list_.append(np.mean(var, axis=(0,1,2)))
 
-        D = Test_Time_Augmentation()
+            """
+            plt.figure(figsize=(10, 30))
+            gs = gridspec.GridSpec(1, 3)
+            gs.update(wspace=0.02, hspace=0.02)
 
-        mean, var = D.predict_aleatoric(model, test_image, iterations = 500, dropout = 0.2)
+            ax = plt.subplot(gs[0, 0])
+            im = ax.imshow(gt.reshape((240, 240)), vmin=0., vmax=3.)
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_aspect('equal')
+            ax.tick_params(bottom='off', top='off', labelbottom='off', right='off', left='off', labelleft='off' )
+            ax = plt.subplot(gs[0, 1])
+            im = ax.imshow(np.argmax(mean, axis = -1).reshape((240, 240)), vmin=0., vmax=3.)
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_aspect('equal')
+            ax.tick_params(bottom='off', top='off', labelbottom='off', right='off', left='off', labelleft='off' )
+            ax = plt.subplot(gs[0, 2])
+            im = ax.imshow(var[:, :, :, 2].reshape((240, 240)), cmap=plt.cm.RdBu_r)
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_aspect('equal')
+            ax.tick_params(bottom='off', top='off', labelbottom='off', right='off', left='off', labelleft='off' )
+            print(volume)
+            #plt.show()
+            plt.savefig('uncertainty_train/train_volume_ind_%d.png' %volume, bbox_inches='tight')
+            """
 
-
-        plt.figure(figsize=(10, 30))
-        gs = gridspec.GridSpec(1, 3)
-        gs.update(wspace=0.02, hspace=0.02)
-
-        ax = plt.subplot(gs[0, 0])
-        im = ax.imshow(gt.reshape((240, 240)), vmin=0., vmax=3.)
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-        ax.set_aspect('equal')
-        ax.tick_params(bottom='off', top='off', labelbottom='off', right='off', left='off', labelleft='off' )
-        ax = plt.subplot(gs[0, 1])
-        im = ax.imshow(np.argmax(mean, axis = -1).reshape((240, 240)), vmin=0., vmax=3.)
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-        ax.set_aspect('equal')
-        ax.tick_params(bottom='off', top='off', labelbottom='off', right='off', left='off', labelleft='off' )
-        ax = plt.subplot(gs[0, 2])
-        im = ax.imshow(var[:, :, :, 2].reshape((240, 240)), cmap=plt.cm.RdBu_r)
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-        ax.set_aspect('equal')
-        ax.tick_params(bottom='off', top='off', labelbottom='off', right='off', left='off', labelleft='off' )
-        print(volume)
-        #plt.show()
-        plt.savefig('uncertainty_train/train_volume_ind_%d.png' %volume, bbox_inches='tight')
-    
-
+    list_ = np.mean(list_, axis=0)
+    print (list_)
 
 
