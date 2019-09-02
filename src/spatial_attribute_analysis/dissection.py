@@ -178,7 +178,8 @@ class Dissector():
 
         class_filters = np.zeros(3)
 
-        for i in range(36):
+        for i in range(11, 12):
+           
             resized_img = imresize(masks[:,:,i], shape, interp='nearest')
             post_processed_img = perform_postprocessing(resized_img)
             eroded_img = (cv2.dilate(post_processed_img, kernel, iterations=1))/255
@@ -186,11 +187,11 @@ class Dissector():
             dice = []
             for class_ in range(1,4):
                 mask = gt == class_
-                class_dice = (np.sum(mask*eroded_img) + 1e-5)*2.0/(np.sum(mask*1.) + np.sum(eroded_img*1.0) + 1e-5) 
+                class_dice = (np.sum(mask*(eroded_img>0)) + 1e-5)*2.0/(np.sum(mask*1.) + np.sum((eroded_img*1.0) > 0) + 1e-5) 
                 dice.append(class_dice)
                 if class_dice > 4e-3:
                     class_filters[class_ -1] += 1
-
+    
             model_list.append(model_name)
             filter_list.append(i)
             layer_list.append(layer_name)
@@ -198,8 +199,8 @@ class Dissector():
             c0_dice.append(dice[0])
             c1_dice.append(dice[1])
             c2_dice.append(dice[2])
-            c3_dice.append(np.sum((1.*(gt>0)*eroded_img + 1e-5)*2.0/(np.sum(1.*(gt>0)) + np.sum(eroded_img*1.0) + 1e-5)))
-            c4_dice.append(np.sum(((1.*np.logical_or(gt==1,gt==3))*eroded_img + 1e-5)*2.0/(np.sum(1.*np.logical_or(gt==1,gt==3)) + np.sum(eroded_img*1.0) + 1e-5)))
+            c3_dice.append(np.sum(((1.*(gt>0))*eroded_img > 0) + 1e-5)*2.0/(np.sum(1.*(gt>0)) + np.sum((eroded_img*1.0 >0)) + 1e-5))
+            c4_dice.append(np.sum(((1.*np.logical_or(gt==1,gt==3))*eroded_img > 0) + 1e-5)*2.0/(np.sum(1.*np.logical_or(gt==1,gt==3)) + np.sum((eroded_img*1.0) > 0) + 1e-5))
                 
 
             resized_masks[:,:,i] = eroded_img
@@ -207,7 +208,7 @@ class Dissector():
         channels = threshold_maps.shape[2]
         rows = 6 # int(channels**0.5)
         cols = 6
-
+        """
         plt.figure(figsize=(100, 100))
         gs = gridspec.GridSpec(rows, cols)
         gs.update(wspace=0.025, hspace=0.05)
@@ -230,24 +231,25 @@ class Dissector():
 
         plt.savefig(image_name +'_'+ model_name + '_' +layer_name+'_.png', bbox_inches='tight')
         # plt.show()
+        """
         return class_filters
 
 if __name__ == "__main__":
     import pandas as pd
     layer_wise_filters = []
-    models_to_consider = ['uresnet']
-    layers_to_consider = ['conv2d_3', 'conv2d_5', 'conv2d_13', 'conv2d_17',  'conv2d_21']
-    # layers_to_consider = ['conv2_block1_1_conv','conv3_block5_1_conv', 'conv2d_6','conv2d_7', 'conv2d_8', 'conv2d_9', 'conv2d_10'] # for densenet
+    models_to_consider = ['dense']
+    # layers_to_consider = ['conv2d_3', 'conv2d_5', 'conv2d_13', 'conv2d_17',  'conv2d_21']
+    layers_to_consider = ['conv2d_10'] # for densenet 'conv2_block1_1_conv','conv3_block5_1_conv', 'conv2d_6','conv2d_7', 'conv2d_8', 'conv2d_9', 
     test_images_to_consider = [20, 24, 35, 39, 44]
 
-    model_path = '/home/pi/Projects/beyondsegmentation/Brain-tumor-segmentation/trained_models/U_resnet/ResUnet.h5'
-    weights_path = '/home/pi/Projects/beyondsegmentation/Brain-tumor-segmentation/trained_models/U_resnet/ResUnet.40_0.559.hdf5'
+    # model_path = '/home/pi/Projects/beyondsegmentation/Brain-tumor-segmentation/trained_models/U_resnet/ResUnet.h5'
+    # weights_path = '/home/pi/Projects/beyondsegmentation/Brain-tumor-segmentation/trained_models/U_resnet/ResUnet.40_0.559.hdf5'
 
     # model_path = '/home/pi/Projects/BioExp/trained_models/SimUnet/Unet_without_skip.h5'
     # weights_path = '/home/pi/Projects/BioExp/trained_models/SimUnet/model_lrsch.hdf5'
 
-    # model_path = '/home/pi/Projects/BioExp/trained_models/densenet_121/densenet121.h5'
-    # weights_path = '/home/pi/Projects/BioExp/trained_models/densenet_121/dense_lrsch.hdf5'
+    model_path = '/home/pi/Projects/BioExp/trained_models/densenet_121/densenet121.h5'
+    weights_path = '/home/pi/Projects/BioExp/trained_models/densenet_121/dense_lrsch.hdf5'
    
 
     for model in models_to_consider:
@@ -268,7 +270,7 @@ if __name__ == "__main__":
             threshold_maps = np.percentile(fmaps, 85, axis=0)
             path = glob("/home/pi/Projects/beyondsegmentation/HGG/**")
 
-            for image_number in test_images_to_consider:
+            for image_number in range(len(path)):
                 input_, label_, mask_ = load_vol(path[image_number], model, slice_= 78)
                 class_filters = D.apply_threshold(input_, label_, mask_, threshold_maps, str(image_number), model, layer)
             layer_wise_filters.append(class_filters)
@@ -305,4 +307,5 @@ if __name__ == "__main__":
         df['class3'] = c2_dice
         df['whole'] = c3_dice
         df['TC'] = c4_dice
-        df.to_csv(model+'_dice_scores.csv')
+        print (np.mean(c4_dice))
+        # df.to_csv(model+'_dice_scores.csv')
