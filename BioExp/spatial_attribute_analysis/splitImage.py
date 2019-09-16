@@ -5,7 +5,7 @@ import os
 from glob import glob 
 from PIL import Image
 
-root_path = '/home/pi/Projects/Model_Interpretability/BrainTumorModelAnalysis/src/spatial_attribute_analysis/dense'
+root_path = '/home/pi/Projects/BioExp/results/Dissection/SimNet'
 paths = glob(root_path + '/*.png')
 
 for i, img_path in enumerate(paths):
@@ -19,7 +19,6 @@ for i, img_path in enumerate(paths):
 	
 	for xi in range(0, 6):
 		for yi in range(0, 6):
-			if (xi == 0) and (yi == 0): continue
 			save_path = os.path.join(root_path_, str((xi*6 + yi)))
 			if not os.path.exists(save_path): 
 				os.makedirs(save_path)	
