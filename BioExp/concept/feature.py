@@ -16,8 +16,20 @@ import matplotlib.gridspec as gridspec
 from decorator import decorator
 
 class Feature_Visualizer():
+  """
+  A class for generating Feature Visualizations of internal filters (based on Lucid)
 
-  def __init__(self, model_loader, layer=None, channel=None, regularizer_params=dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])):
+  Inputs: model_loader: A function that loads an instance of the Lucid Model class
+          layer: The layer to visualize
+          channel: The index of the filter to visualize
+          savepath: Path to save visualized features
+          n_channels: Number of channels in model input
+          regularizer_params: A dictionary of regularizer parameters for the optimizer. Parameters which are not given will default to below values.
+
+  Outputs: Visualized Feature saved at savepath
+  """
+
+  def __init__(self, model_loader, layer=None, channel=None, savepath = './', n_channels = 4, regularizer_params=dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])):
 
     default_dict = dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])
     for key in regularizer_params.keys():
@@ -34,6 +46,8 @@ class Feature_Visualizer():
     self.L1 = regularizer_params['L1'] or 1e-4
     self.layer = layer or -1
     self.channel = channel or 0
+    self.savepath = savepath
+    self.n_channels = n_channels
 
   def show_images(self, images):
     html = ""
@@ -93,7 +107,10 @@ class Feature_Visualizer():
     return inner
 
   
-  def run(self, savepath, n_channels=4, style_template=None):
+  def run(self, style_template=None):
+    """
+
+    """
 
     model = self.loader()
     model.load_graphdef()
@@ -118,7 +135,7 @@ class Feature_Visualizer():
       ]
 
       T = render.make_vis_T(model, obj,
-                            param_f=lambda: param.image(240, channels=n_channels, fft=self.decorrelate,
+                            param_f=lambda: param.image(240, channels=self.n_channels, fft=self.decorrelate,
                                                         decorrelate=self.decorrelate),
                             optimizer=None,
                             transforms=transforms, relu_gradient_override=True)
@@ -130,31 +147,14 @@ class Feature_Visualizer():
 
       plt.figure(figsize=(30,10))
 
-      for i in range(1, 5):
-        plt.subplot(1, 4, i)
+      for i in range(1, self.n_channels+1):
+        plt.subplot(1, self.n_channels, i)
         image = T("input").eval()[:, :, :, i - 1].reshape((240, 240))
-        print(image.min(), image.max())
+        #print(image.min(), image.max())
         plt.imshow(T("input").eval()[:, :, :, i - 1].reshape((240, 240)), cmap='gray',
                    interpolation='bilinear', vmin=0., vmax=1.)
         plt.xticks([])
         plt.yticks([])
 
         # show(np.hstack(T("input").eval()))
-    plt.savefig(savepath+self.layer+'_' + str(self.channel) +'.png', bbox_inches='tight')
-
-
-if __name__ == '__main__':
-
-  # Initialize a class which loads a Lucid Model Instance with the required parameters
-  class Load_Model(Model):
-
-    model_path = '/home/parth/lucid/lucid/model_res.pb'
-    image_shape = [None, 4, 240, 240]
-    image_value_range = (0, 1)
-    input_name = 'input_1'
-
-  # Initialise a Visualizer instance
-  E = Feature_Visualizer(Load_Model, 'conv2d_23', 0)
-
-  # Run the Visualizer
-  E.run('stylereg_features_', n_channels=4)
+    plt.savefig(self.savepath+self.layer+'_' + str(self.channel) +'.png', bbox_inches='tight')
