@@ -19,17 +19,17 @@ class Feature_Visualizer():
   """
   A class for generating Feature Visualizations of internal filters (based on Lucid)
 
-  Inputs: model_loader: A function that loads an instance of the Lucid Model class
+  Inputs: model_loader: A function that loads an instance of the Lucid Model class (see examples)
           layer: The layer to visualize
-          channel: The index of the filter to visualize
-          savepath: Path to save visualized features
-          n_channels: Number of channels in model input
-          regularizer_params: A dictionary of regularizer parameters for the optimizer. Parameters which are not given will default to below values.
+          channel(optional): The index of the filter to visualize; defaults to 0.
+          savepath(optional): Path to save visualized features
+          n_channels(optional): Number of channels in model input; defaults to 4
+          regularizer_params(optional): A dictionary of regularizer parameters for the optimizer. Parameters which are not given will default to below values.
 
   Outputs: Visualized Feature saved at savepath
   """
 
-  def __init__(self, model_loader, layer=None, channel=None, savepath = './', n_channels = 4, regularizer_params=dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])):
+  def __init__(self, model_loader, layer, channel=None, savepath = './', n_channels = 4, regularizer_params=dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])):
 
     default_dict = dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])
     for key in regularizer_params.keys():
@@ -44,7 +44,7 @@ class Feature_Visualizer():
     self.blur = regularizer_params['blur'] or 0
     self.decorrelate = regularizer_params['decorrelate'] or True
     self.L1 = regularizer_params['L1'] or 1e-4
-    self.layer = layer or -1
+    self.layer = layer
     self.channel = channel or 0
     self.savepath = savepath
     self.n_channels = n_channels
