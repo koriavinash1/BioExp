@@ -153,3 +153,36 @@ def load_file( rgbpath, maskpath=None):
         return rgb
 
     return rgb, mask
+
+
+
+
+def predict_volume_brats(model, test_image, show=False):
+    """
+        Predictions for brats dataset
+        involves renaming of classes
+
+        model: keras model
+        test_image: image (H x W x C)
+        show: bool, to display prediction
+    """
+    
+    test_image = test_image[None, ...]
+    
+    prediction = model.predict(test_image, batch_size=1) 
+    prediction_probs = prediction.copy()
+    prediction = np.argmax(prediction, axis=-1)
+    prediction=prediction.astype(np.uint8)
+
+
+    prediction[prediction==3]=4
+    
+    if show:
+        plt.subplot(1,2,1)
+        plt.imshow(test_image[:,:,3])
+        plt.subplot(1,2,2)
+        plt.imshow(prediction[0])
+        plt.show()
+    
+    
+    return np.array(prediction), np.array(prediction_probs)
