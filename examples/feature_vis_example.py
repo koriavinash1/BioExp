@@ -12,8 +12,8 @@ class Load_Model(Model):
   image_value_range = (0, 1)
   input_name = 'input_1'
 
-# Initialise a Visualizer Instance
-E = Feature_Visualizer(Load_Model, 'conv2d_23', 0)
+# Initialize a Visualizer Instance
+E = Feature_Visualizer(Load_Model, 'conv2d_23', channel = 0, savepath = '../results/')
 
 # Run the Visualizer
-E.run('stylereg_features_', n_channels=4)
+E.run()
