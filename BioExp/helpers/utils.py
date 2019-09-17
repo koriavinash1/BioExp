@@ -1,17 +1,20 @@
 from glob import glob
 import numpy as np
+import SimpleITK as sitk
+import PIL
 
-def normalize_scheme(slice_not):
-    '''
+
+def normalize_scheme(slicennot):
+    """
         normalizes each slice, excluding gt
         subtracts mean and div by std dev for each slice
         clips top and bottom one percent of pixel intensities
-    '''
+    """
     normed_slices = np.zeros(( 4,155, 240, 240))
-    for slice_ix in range(4):
-        normed_slices[slice_ix] = slice_not[slice_ix]
+    for slicenix in range(4):
+        normed_slices[slicenix] = slicennot[slicenix]
         for mode_ix in range(155):
-            normed_slices[slice_ix][mode_ix] = _normalize(slice_not[slice_ix][mode_ix])
+            normed_slices[slicenix][mode_ix] = _normalize(slicennot[slicenix][mode_ix])
 
     return normed_slices    
 
@@ -30,51 +33,123 @@ def _normalize(slice):
         tmp[tmp==tmp.min()]=-9
         return tmp
 
-def load_vol(filepath_image, model_type, slice_):
+def load_vol_brats( rootpath, 
+                    slicen = -1,
+                    pad = None):
 
-    '''
-    segment the input volume
-    INPUT   (1) str 'filepath_image': filepath of the volume to predict 
-            (2) bool 'show': True to ,
-    OUTPUt  (1) np array of the predicted volume
-            (2) np array of the corresping ground truth
-    '''
+    """
+        loads volume if exists
 
-    #read the volume
-    flair = glob( filepath_image + '/*_flair.nii.gz')
-    t2 = glob( filepath_image + '/*_t2.nii.gz')
-    gt = glob( filepath_image + '/*_seg.nii.gz')
-    t1s = glob( filepath_image + '/*_t1.nii.gz')
-    t1c = glob( filepath_image + '/*_t1ce.nii.gz')
-    mask = glob( filepath_image + '/mask.nii.gz')
+        rootpath : patient data root path
+        slicen : sice which needs to ne loaded
+        pad : number of pixels to be padded
+                in X, Y direction
+    """
+
+    flair = glob( rootpath + '/*_flair.nii.gz')
+    t2 = glob( rootpath + '/*_t2.nii.gz')
+    gt = glob( rootpath + '/*_seg.nii.gz')
+    t1s = glob( rootpath + '/*_t1.nii.gz')
+    t1c = glob( rootpath + '/*_t1ce.nii.gz')
     
     t1=[scan for scan in t1s if scan not in t1c]
-    if (len(flair)+len(t2)+len(gt)+len(t1)+len(t1c))<5:
+
+    if (len(flair)+len(t2)+len(gt)+len(t1)+len(t1c)) < 5:
         print("there is a problem here!!! the problem lies in this patient :")
-    scans_test = [flair[0], t1[0], t1c[0], t2[0], gt[0], mask[0]]
+
+    scans_test = [flair[0], t1[0], t1c[0], t2[0]]
     test_im = [sitk.GetArrayFromImage(sitk.ReadImage(scans_test[i])) for i in range(len(scans_test))]
-
-
-    test_im=np.array(test_im).astype(np.float32)
-    test_image = test_im[0:4]
-    gt=test_im[-2]
-    gt[gt==4]=3
-    mask = test_im[-1]
-
-
-    #normalize each slice following the same scheme used for training
-    test_image = normalize_scheme(test_image)
-
-    #transform teh data to channels_last keras format
+    test_im = np.array(test_im).astype(np.float32)
+    test_image = normalize_scheme(test_im)
     test_image = test_image.swapaxes(0,1)
-    test_image=np.transpose(test_image,(0,2,3,1))
-    print (mask.shape)
-    test_image, gt, mask_ = np.array(test_image[slice_]), np.array(gt[slice_]), np.array(mask[slice_])
-    if model_type == 'dense':
-        npad = ((8, 8), (8, 8), (0, 0))
-        test_image = np.pad(test_image, pad_width=npad, mode='constant', constant_values=0)
-        npad = ((8, 8), (8, 8))
-        gt = np.pad(gt, pad_width=npad, mode='constant', constant_values=0)
-        mask_ = np.pad(mask_, pad_width=npad, mode='constant', constant_values=0)
-    return test_image, gt, mask_
+    test_image = np.transpose(test_image,(0,2,3,1))
 
+    if pad:
+        npad = ((pad, pad), (pad, pad), (0, 0), (0, 0))
+        test_image = np.pad(test_image, pad_width=npad, mode='constant', constant_values=0)
+
+    if not slicen == -1:
+        test_image = np.array(test_image[slicen])
+
+
+    try:
+        gt = sitk.GetArrayFromImage(sitk.ReadImage(gt[0]))
+        gt[gt == 4] = 3
+
+        if pad:
+            npad  = ((pad, pad), (pad, pad), (0, 0))
+            gt    = np.pad(gt, pad_width=npad, mode='constant', constant_values=0)
+        if not slicen == -1:
+            gt  = np.array(gt[slicen])
+        return test_image, gt
+
+    except:
+        return test_image
+
+
+def load_vol( t1path, t2path, t1cepath, flairpath, 
+                segpath = None,
+                slicen = -1, 
+                pad = None):
+    """
+        loads volume if exists
+
+        rootpath : patient data root path
+        slicen : sice which needs to ne loaded
+        pad : number of pixels to be padded
+                in X, Y direction
+    """
+
+    test_im = []
+    for pth in [t1path, t2path, t1cepath, flairpath]:
+        try: 
+            test_im.append(sitk.GetArrayFromImage(sitk.ReadImage(pth)))
+        except:
+            raise ValueError ("Path doesn't exist: {}".format(pth))
+
+    test_im = np.array(test_im).astype(np.float32)
+    gt = test_im[-2]
+    gt[gt == 4] = 3
+
+    test_image = normalize_scheme(test_im)
+    test_image = test_image.swapaxes(0,1)
+    test_image = np.transpose(test_image,(0,2,3,1))
+
+    if pad:
+        npad = ((pad, pad), (pad, pad), (0, 0), (0, 0))
+        test_image = np.pad(test_image, pad_width=npad, mode='constant', constant_values=0)
+        
+    if not slicen == -1:
+        test_image = np.array(test_image[slicen])
+
+    if segpath:
+        gt = sitk.GetArrayFromImage(sitk.ReadImage(segpath))
+        gt[gt == 4] = 3
+
+        if pad:
+            npad  = ((pad, pad), (pad, pad), (0, 0))
+            gt    = np.pad(gt, pad_width=npad, mode='constant', constant_values=0)
+        if not slicen == -1:
+            gt  = np.array(gt[slicen])
+        return test_image, gt
+
+    return test_image
+
+
+def load_file( rgbpath, maskpath=None):
+    """
+        loads rgb image
+
+        rgbpath: rgb image path
+        maskpath: segmentation path if exists
+    """
+    rgb  = PIL.Image.open(rgbpath).convert('RGB')
+
+    """TODO: specific preprocessing"""
+
+    try: 
+        mask = PIL.Image.open(maskpath).convert('L')
+    except:
+        return rgb
+
+    return rgb, mask
