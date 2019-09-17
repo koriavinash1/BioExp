@@ -17,7 +17,7 @@ from decorator import decorator
 
 class Feature_Visualizer():
   """
-  A class for generating Feature Visualizations of internal filters (based on Lucid)
+  A class for generating Feature Visualizations of internal filters from a .pb model file (based on Lucid)
 
   Inputs: model_loader: A function that loads an instance of the Lucid Model class (see examples)
           layer: The layer to visualize
