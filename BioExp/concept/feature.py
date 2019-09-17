@@ -133,7 +133,7 @@ class Feature_Visualizer():
       for i in range(1, 5):
         plt.subplot(1, 4, i)
         image = T("input").eval()[:, :, :, i - 1].reshape((240, 240))
-        print(image.min(), image.max())
+        #print(image.min(), image.max())
         plt.imshow(T("input").eval()[:, :, :, i - 1].reshape((240, 240)), cmap='gray',
                    interpolation='bilinear', vmin=0., vmax=1.)
         plt.xticks([])
@@ -141,20 +141,3 @@ class Feature_Visualizer():
 
         # show(np.hstack(T("input").eval()))
     plt.savefig(savepath+self.layer+'_' + str(self.channel) +'.png', bbox_inches='tight')
-
-
-if __name__ == '__main__':
-
-  # Initialize a class which loads a Lucid Model Instance with the required parameters
-  class Load_Model(Model):
-
-    model_path = '/home/parth/lucid/lucid/model_res.pb'
-    image_shape = [None, 4, 240, 240]
-    image_value_range = (0, 1)
-    input_name = 'input_1'
-
-  # Initialise a Visualizer instance
-  E = Feature_Visualizer(Load_Model, 'conv2d_23', 0)
-
-  # Run the Visualizer
-  E.run('stylereg_features_', n_channels=4)
