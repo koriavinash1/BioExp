@@ -155,8 +155,6 @@ def load_file( rgbpath, maskpath=None):
     return rgb, mask
 
 
-
-
 def predict_volume_brats(model, test_image, show=False):
     """
         Predictions for brats dataset
