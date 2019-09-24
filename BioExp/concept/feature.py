@@ -29,7 +29,7 @@ class Feature_Visualizer():
   Outputs: Visualized Feature saved at savepath
   """
 
-  def __init__(self, model_loader, layer, channel=None, savepath = './', n_channels = 4, regularizer_params=dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])):
+  def __init__(self, model_loader, savepath = './', n_channels = 4, regularizer_params=dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])):
 
     default_dict = dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])
     for key in regularizer_params.keys():
@@ -44,10 +44,11 @@ class Feature_Visualizer():
     self.blur = regularizer_params['blur'] or 0
     self.decorrelate = regularizer_params['decorrelate'] or True
     self.L1 = regularizer_params['L1'] or 1e-4
-    self.layer = layer
-    self.channel = channel or 0
     self.savepath = savepath
     self.n_channels = n_channels
+
+    self.model = self.loader()
+    self.model.load_graphdef()
 
   def show_images(self, images):
     html = ""
@@ -107,13 +108,13 @@ class Feature_Visualizer():
     return inner
 
   
-  def run(self, style_template=None):
+  def run(self, layer, channel=None, style_template=None):
     """
 
     """
 
-    model = self.loader()
-    model.load_graphdef()
+    self.layer = layer
+    self.channel = channel or 0
 
     # layer_to_consider = ['conv2d_3', 'conv2d_5', 'conv2d_7', 'conv2d_13', 'conv2d_15', 'conv2d_17',  'conv2d_21', 'conv2d_23', 'conv2d_25']
 
@@ -134,7 +135,7 @@ class Feature_Visualizer():
         transform.random_rotate(range(-self.rotate, self.rotate + 1))
       ]
 
-      T = render.make_vis_T(model, obj,
+      T = render.make_vis_T(self.model, obj,
                             param_f=lambda: param.image(240, channels=self.n_channels, fft=self.decorrelate,
                                                         decorrelate=self.decorrelate),
                             optimizer=None,
@@ -146,15 +147,18 @@ class Feature_Visualizer():
         T("vis_op").run()
 
       plt.figure(figsize=(30,10))
+      
+      texture_images = []
 
       for i in range(1, self.n_channels+1):
         plt.subplot(1, self.n_channels, i)
         image = T("input").eval()[:, :, :, i - 1].reshape((240, 240))
         #print(image.min(), image.max())
-        plt.imshow(T("input").eval()[:, :, :, i - 1].reshape((240, 240)), cmap='gray',
+        plt.imshow(image, cmap='gray',
                    interpolation='bilinear', vmin=0., vmax=1.)
         plt.xticks([])
         plt.yticks([])
-
+        texture_images.append(image)
         # show(np.hstack(T("input").eval()))
     plt.savefig(self.savepath+self.layer+'_' + str(self.channel) +'.png', bbox_inches='tight')
+    return np.array(texture_images).transpose(1, 2, 0)

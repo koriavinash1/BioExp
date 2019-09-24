@@ -7,7 +7,7 @@ from keras.models import load_model
 from losses import *
 
 from lucid.modelzoo.vision_base import Model
-import sys
+import sys, os
 sys.path.append('..')
 from BioExp.concept.feature import Feature_Visualizer
 
@@ -73,10 +73,10 @@ ipdb.set_trace()
 # Initialize a class which loads a Lucid Model Instance with the required parameters
 
 class Load_Model(Model):
-  model_path = model_path
-  image_shape = [None, 4, 240, 240]
-  image_value_range = (0, 1)
-  input_name = 'input_1'
+    model_path = model_path
+    image_shape = [None, 4, 240, 240]
+    image_value_range = (0, 1)
+    input_name = 'input_1'
 
 
 # Initialize a Visualizer Instance
@@ -90,4 +90,22 @@ for class_ in np.unique(classes):
 for layer_, feature_, class_ in zip(feature_maps, layers, classes):
     # Run the Visualizer
     texture_maps['class'+str(class_)].append(E.run(str(layer_) + '_' + str(feature_), channel = class_)) 
+
+
+# radiomic analysis
+from radiomic_features import ExtractRadioimicFeatures
+
+for texture_key in texture_maps.keys():
+    for ii, tmap in enumerate(texture_maps[texture_key]):
+        # create sitk object
+        ipdb.set_trace()
+        save_path = '../results/RadiomicsAnalysis/'+texture_key+'_'+str(ii)
+        os.makedirs(save_path, exists_ok=True)
+        
+        feat_extractor = ExtractRadiomicFeatures(tmap,
+                                        save_path = save_path)
+
+        df = feat_extractor.all_features()  
+
+
 
