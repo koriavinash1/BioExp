@@ -92,18 +92,19 @@ if __name__ == '__main__':
 		dice_en=dice_(y_enh,p_enh)
 		return dice_en
 
-	path = glob('/media/parth/DATA/brats_slices/_train/patches/*.npy')
+	data_root_path = '../sample_vol/'
 
-	model = load_model('/home/parth/Interpretable_ML/Brain-tumor-segmentation/checkpoints/og_pipeline/ResUnet.h5', 
+	model_path = '../trained_models/U_resnet/ResUnet.h5'
+	weights_path = '../trained_models/U_resnet/ResUnet.40_0.559.hdf5'
+
+	test_image, gt = utils.load_vol_brats('../sample_vol/Brats18_CBICA_ARZ_1', slicen=78)
+
+	model = load_model(model_path, 
 		custom_objects={'gen_dice_loss': gen_dice_loss,'dice_whole_metric':dice_whole_metric,
 		'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
 
-	weights = '/home/parth/Interpretable_ML/Brain-tumor-segmentation/checkpoints/og_pipeline/ResUnet.40_0.559.hdf5'
-
-	test_image = np.load('/home/parth/Downloads/tumor_test.npy')
-
 	test_image = test_image.reshape((1, 240, 240, 4))
 
-	A = Ablation(model, weights, dice_label_metric, 16, test_image)
+	A = Ablation(model, weights_path, dice_label_metric, 16, test_image)
 
 	print(A.ablate_filter(10))
