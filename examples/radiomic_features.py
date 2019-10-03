@@ -108,7 +108,7 @@ class ExtractRadiomicFeatures():
     
     def ngtdm_features(self):
         
-        ngtdm_dict {}
+        ngtdm_dict =  {}
         NGTDMFeatures = ngtdm.RadiomicsNGTDM(img,GT)
         NGTDMFeatures.enableAllFeatures()  # On the feature class level, all features are disabled by default.
         NGTDMFeatures.execute()

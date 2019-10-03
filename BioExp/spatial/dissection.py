@@ -10,8 +10,10 @@ import pandas as pd
 from ..helpers.utils import *
 from keras.models import Model
 import matplotlib.pyplot as plt
-from scipy.misc import imresize
+from skimage.transform import resize as imresize
 from keras.utils import np_utils
+import matplotlib
+matplotlib.use('Agg')
 
 import matplotlib.gridspec as gridspec
 from scipy.ndimage.measurements import label
@@ -26,7 +28,7 @@ class Dissector():
         layer_name: intermediate layer name which needs to be analysed
     """
 
-    def __init__(self, model, layer_name):
+    def __init__(self, model, layer_name, seq=None):
 
         self.model = Model(inputs=model.input, outputs=model.get_layer(layer_name).output)
 
@@ -35,6 +37,7 @@ class Dissector():
             self.model.layers[i].trainable = False
 
         self.layer_name = layer_name
+        self.seq = seq
 
 
     def _perform_postprocessing(self, img, threshold=80):
@@ -77,9 +80,12 @@ class Dissector():
             fmaps = []
             input_paths = os.listdir(dataset_path)
 
-            for i in range(len(input_paths)):
-                print ("[INFO: BioExp] Working on {}".format(i))
-                input_, label_ = load_vol_brats(os.path.join(dataset_path, input_paths[i]), slicen=78)
+            for i in range(len(input_paths) if len(input_paths) < 1000 else 1000):
+                print ("[INFO: BioExp] Slice no {} -- Working on {}".format(self.layer_name, i))
+                input_, label_ = load_numpy_slice(os.path.join(dataset_path, input_paths[i]), 
+					os.path.join(dataset_path, 
+					input_paths[i]).replace('mask', 'label').replace('labels', 'masks'),
+                                        self.seq)
                 output = np.squeeze(self.model.predict(input_[None, ...]))
                 fmaps.append(output)
 
@@ -129,7 +135,6 @@ class Dissector():
         if save_path:
             if not os.path.exists(save_path): 
                 os.makedirs(save_path)
-
             plt.savefig(os.path.join(save_path, self.layer_name+'.png'), bbox_inches='tight')
         else:
             plt.show()
@@ -168,9 +173,12 @@ class Dissector():
 
 
         for i in range(nfeatures):
-            resized_img = imresize(masks[:,:,i], shape, interp='nearest')
-            post_processed_img = self._perform_postprocessing(resized_img, 
+            resized_img = imresize(masks[:,:,i], shape, order=0)
+            try:
+                post_processed_img = self._perform_postprocessing(resized_img, 
                                          threshold = post_process_threshold)
+            except:
+                post_processed_img = resized_img
             eroded_img = (cv2.dilate(post_processed_img, kernel, iterations=1))
 
             try:
@@ -227,9 +235,12 @@ class Dissector():
 
 
         for i in range(nfeatures):
-            resized_img = imresize(masks[:,:,i], shape, interp='nearest')
-            post_processed_img = self._perform_postprocessing(resized_img, 
+            resized_img = imresize(masks[:,:,i], shape, order=0)
+            try:
+                post_processed_img = self._perform_postprocessing(resized_img, 
                                          threshold = post_process_threshold)
+            except:
+                post_processed_img = resized_img
             eroded_img = (cv2.dilate(post_processed_img, kernel, iterations=1))/255
             try:
                 eroded_img = eroded_img*ROI 
@@ -239,7 +250,7 @@ class Dissector():
 
             for class_ in range(nclasses):
                 mask = gt == class_
-                class_dice = (np.sum(mask*(eroded_img>0)) + 1e-5)*2.0/(np.sum(mask*1.) + np.sum((eroded_img*1.0) > 0) + 1e-5) 
+                class_dice = (np.sum(mask*(eroded_img>0)) + 1e-5)*2.0/(np.sum(mask*1.) + np.sum((eroded_img>0)*1.) + 1e-5) 
                 dice_json['class_'+str(class_)].append(class_dice)
 
             resized_masks[:,:,i] = eroded_img

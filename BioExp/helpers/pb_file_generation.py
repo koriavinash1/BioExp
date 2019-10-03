@@ -21,7 +21,6 @@ shallow_pb_path = 'trained_models/shallowunet/shallow_unet.pb'
 
 
 from keras.models import load_model
-from models import *
 from losses import *
 
 
@@ -59,7 +58,7 @@ def save_frozen_graph(filename):
     with open(filename, "wb") as f:
           f.write(output_graph_def.SerializeToString())
 
-
+"""
 with tf.Session(graph=K.get_session().graph) as session:
     session.run(tf.global_variables_initializer())
     
@@ -75,3 +74,22 @@ with open(pb_path, "rb") as f:
     
 for node in graph_def.node:
     print(node.name)
+"""
+
+def generate_pb(model_path, layer_name, pb_path, wts_path):
+    with tf.Session(graph=K.get_session().graph) as session:
+
+        session.run(tf.global_variables_initializer())
+        model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
+                                        'dice_whole_metric':dice_whole_metric,
+                                        'dice_core_metric':dice_core_metric,
+                                        'dice_en_metric':dice_en_metric})
+        model.load_weights(wts_path)
+        print (model.summary())
+        output_graph_def = tf.compat.v1.graph_util.convert_variables_to_constants(
+              session,
+              K.get_session().graph.as_graph_def(),
+              [layer_name + '/convolution']
+          )
+        with open(pb_path, "wb") as f:
+            f.write(output_graph_def.SerializeToString())
