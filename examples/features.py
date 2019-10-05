@@ -13,34 +13,33 @@ import sys, os
 sys.path.append('..')
 from BioExp.concept.feature import Feature_Visualizer
 from keras import backend as K 
-
-
 import matplotlib.pyplot as plt
 
+import pdb
+
 seq = 'flair'
-model_pb_path = '../../saved_models/model_{}/model.pb'.format(seq)
+model_pb_path  = '../../saved_models/model_{}/model.pb'.format(seq)
 data_root_path = '../../slices/val/patches/'
-model_path = '../../saved_models/model_{}/model-archi.h5'.format(seq)
-weights_path = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
+model_path     = '../../saved_models/model_{}/model-archi.h5'.format(seq)
+weights_path   = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
+
 model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
                                         'dice_whole_metric':dice_whole_metric,
                                         'dice_core_metric':dice_core_metric,
                                         'dice_en_metric':dice_en_metric})
 model.load_weights(weights_path)
 
-
 feature_maps = []
 layers = []
 classes = []
 
-layers_to_consider = ['conv2d_3', 'conv2d_5', 'conv2d_7', 'conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_17', 'conv2d_19', 'conv2d_21']
+layers_to_consider = ['conv2d_3']#, 'conv2d_5', 'conv2d_7', 'conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_17', 'conv2d_19', 'conv2d_21']
 input_name = 'input_1'
 
 print (model.summary())
-# layer_name = 'conv2d_3'
+
 
 for layer_name in layers_to_consider:
-    # layer_name = layer_name.split('_')[0] + '_' + str(int(layer_name.split('_')[1]) + initial_no)
     dissector = spatial.Dissector(model=model,
                             layer_name = layer_name,
                             seq=seq)
@@ -54,10 +53,7 @@ for layer_name in layers_to_consider:
     image = image[:, :, 3][..., None]
     maks_path = '../sample_vol/Brats18_CBICA_APR_1/mask.nii.gz'
     ROI = sitk.GetArrayFromImage(sitk.ReadImage(maks_path))[103, :, :]
-    dissector.apply_threshold(image, threshold_maps, 
-                            nfeatures=None, 
-                            save_path='../results/Dissection/unet_{}/feature_maps/'.format(seq), 
-                            ROI = ROI)
+
     print (layer_name)
     _, df = dissector.quantify_gt_features(image, gt, 
                             threshold_maps, 
@@ -70,7 +66,7 @@ for layer_name in layers_to_consider:
     # list all featuremap dice greater than 0.1
     n_top = 5
     dice_matrix = df.values[:, 1:]
-    dice_matrix = dice_matrix > 0.7
+    dice_matrix = dice_matrix > 0.1
     feature_info, class_info = np.where(dice_matrix)
     index = np.arange(len(feature_info))
     np.random.shuffle(index)
@@ -94,41 +90,53 @@ if not os.path.exists(model_pb_path):
 input_name = 'input_1' #str(input("Input Name: "))
 class Load_Model(Model):
     model_path = model_pb_path
-    image_shape = [None, 4, 240, 240]
+    image_shape = [None, 1, 240, 240]
     image_value_range = (0, 1)
     input_name = input_name
+
 
 graph_def = tf.GraphDef()
 with open(model_pb_path, "rb") as f:
     graph_def.ParseFromString(f.read())
 for node in graph_def.node:
     print(node.name)
+
+
 print ("==========================")
-texture_maps = {}
-for class_ in np.unique(classes):
-    texture_maps['class'+str(class_)] = []
+texture_maps = []
+print (np.unique(classes))
 
-
+pdb.set_trace()
+counter  = 0
 for layer_, feature_, class_ in zip(layers, feature_maps, classes):
+    # if counter == 2: break
     K.clear_session()
+    
     # Run the Visualizer
     print (layer_, feature_)
     # Initialize a Visualizer Instance
     save_pth = '../results/lucid/unet_{}/'.format(seq)
     os.makedirs(save_pth, exist_ok=True)
     E = Feature_Visualizer(Load_Model, savepath = save_pth)
-    texture_maps['class'+str(class_)].append(E.run(layer = layer_, # + '_' + str(feature_), 
+    texture_maps.append(E.run(layer = layer_, # + '_' + str(feature_), 
 						 channel = feature_)) 
+    counter += 1
+
+
+json = {'textures': texture_maps, 'class_info': classes, 'features': feature_maps, 'layer_info': layers}
+import pickle
+file_ = open(os.path.join('../results/lucid/unet_{}/all_info'.format(seq)), 'wb')
+pickle.dump(json, file_)
 
 
 # radiomic analysis
-from radiomic_features import ExtractRadioimicFeatures
-
+from radiomic_features import ExtractRadiomicFeatures
+print (texture_maps.keys())
 for texture_key in texture_maps.keys():
     for ii, tmap in enumerate(texture_maps[texture_key]):
         # create sitk object
         # ipdb.set_trace()
-        save_path = '../results/unet_{}/RadiomicsAnalysis/'.format(seq) +texture_key+'_'+str(ii)
+        save_path = '../results/RadiomicsAnalysis/unet_{}/'.format(seq) +texture_key+'_'+str(ii)
         os.makedirs(save_path, exist_ok=True)
         
         feat_extractor = ExtractRadiomicFeatures(tmap,

@@ -29,7 +29,7 @@ class Feature_Visualizer():
   Outputs: Visualized Feature saved at savepath
   """
 
-  def __init__(self, model_loader, savepath = './', n_channels = 4, regularizer_params=dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])):
+  def __init__(self, model_loader, savepath = './', n_channels = 1, regularizer_params=dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])):
 
     default_dict = dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])
     for key in regularizer_params.keys():
@@ -139,7 +139,7 @@ class Feature_Visualizer():
                             param_f=lambda: param.image(240, channels=self.n_channels, fft=self.decorrelate,
                                                         decorrelate=self.decorrelate),
                             optimizer=None,
-                            transforms=transforms, relu_gradient_override=True)
+                            transforms=[], relu_gradient_override=True)
       tf.initialize_all_variables().run()
 
       # pprint([v.name for v in tf.get_default_graph().as_graph_def().node])
@@ -153,7 +153,7 @@ class Feature_Visualizer():
       for i in range(1, self.n_channels+1):
         plt.subplot(1, self.n_channels, i)
         image = T("input").eval()[:, :, :, i - 1].reshape((240, 240))
-        #print(image.min(), image.max())
+        print(image.min(), image.max())
         plt.imshow(image, cmap='gray',
                    interpolation='bilinear', vmin=0., vmax=1.)
         plt.xticks([])

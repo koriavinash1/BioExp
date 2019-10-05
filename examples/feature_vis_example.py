@@ -16,4 +16,6 @@ class Load_Model(Model):
 E = Feature_Visualizer(Load_Model, savepath = '../results/')
 
 # Run the Visualizer
-E.run(layer = 'conv2d_3', channel = 4)
+a = E.run(layer = 'conv2d_3', channel = 30)
+
+

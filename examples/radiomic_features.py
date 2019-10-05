@@ -8,19 +8,20 @@ from tqdm import tqdm
 from radiomics import firstorder, glcm, imageoperations, glrlm, glszm, ngtdm, gldm, getTestCase
 
 class ExtractRadiomicFeatures():
-    def __init__(input_image, 
+    def __init__(self, input_image, 
                     input_mask=None, 
                     save_path=None, 
                     seq='Flair',
                     class_ = 'ET',
                     all_=True):
         
-        self.input_image = input_image
+        self.img = input_image
         if not input_mask:
-            self.input_mask = np.ones(tuple(list(self.input_image.shape)[:-1]))
-        else: self.input_mask = input_mask
-
+            self.GT = np.ones(tuple(list(self.img.shape)[:-1]))
+        else: self.GT = input_mask
+        self.GT = sitk.GetImageFromArray(self.GT)
         self.save_path = save_path
+        self.img = sitk.GetImageFromArray(self.img) #, isVector=False)
         self.seq = seq
         self.all_ = all_
         self.class_ = class_
@@ -30,7 +31,7 @@ class ExtractRadiomicFeatures():
     def first_order(self):
 
         feat_dict = {}
-        firstOrderFeatures = firstorder.RadiomicsFirstOrder(img,GT)
+        firstOrderFeatures = firstorder.RadiomicsFirstOrder(self.img, self.GT)
         firstOrderFeatures.enableAllFeatures()
         firstOrderFeatures.execute()          
         for (key,val) in six.iteritems(firstOrderFeatures.featureValues):
@@ -49,7 +50,7 @@ class ExtractRadiomicFeatures():
     def glcm_features(self):
 
         glcm_dict = {}
-        GLMFeatures = glcm.RadiomicsGLCM(img,GT)
+        GLMFeatures = glcm.RadiomicsGLCM(self.img, self.GT)
         GLCMFeatures.enableAllFeatures()
         GLCMFeatures.execute()
         for (key,val) in six.iteritems(GLCMFeatures.featureValues):
@@ -68,7 +69,7 @@ class ExtractRadiomicFeatures():
     def glszm_features(self):
         
         glszm_dict = {}
-        GLSZMFeatures = glszm.RadiomicsGLSZM(img,GT)
+        GLSZMFeatures = glszm.RadiomicsGLSZM(self.img, self.GT)
         GLSZMFeatures.enableAllFeatures()  # On the feature class level, all features are disabled by default.
         GLSZMFeatures.execute()
         for (key,val) in six.iteritems(GLSZMFeatures.featureValues):
@@ -89,7 +90,7 @@ class ExtractRadiomicFeatures():
 
 
         glrlm_dict = {}
-        GLRLMFeatures = glrlm.RadiomicsGLRLM(img,GT)
+        GLRLMFeatures = glrlm.RadiomicsGLRLM(self.img, self.GT)
         GLRLMFeatures.enableAllFeatures()  # On the feature class level, all features are disabled by default.
         GLRLMFeatures.execute()
         for (key,val) in six.iteritems(GLRLMFeatures.featureValues):
@@ -109,7 +110,7 @@ class ExtractRadiomicFeatures():
     def ngtdm_features(self):
         
         ngtdm_dict =  {}
-        NGTDMFeatures = ngtdm.RadiomicsNGTDM(img,GT)
+        NGTDMFeatures = ngtdm.RadiomicsNGTDM(self.img, self.GT)
         NGTDMFeatures.enableAllFeatures()  # On the feature class level, all features are disabled by default.
         NGTDMFeatures.execute()
         for (key,val) in six.iteritems(NGTDMFeatures.featureValues):
@@ -127,7 +128,7 @@ class ExtractRadiomicFeatures():
     def gldm_features(self):
 
         gldm_dict = {}
-        GLDMFeatures = gldm.RadiomicsGLDM(img,GT)
+        GLDMFeatures = gldm.RadiomicsGLDM(self.img, self.GT)
         GLDMFeatures.enableAllFeatures()  # On the feature class level, all features are disabled by default.
         GLDMFeatures.execute()
         for (key,val) in six.iteritems(GLDMFeatures.featureValues):
