@@ -35,20 +35,21 @@ class Feature_Visualizer():
     for key in regularizer_params.keys():
       default_dict[key] = regularizer_params[key] 
     regularizer_dict = default_dict
+    print('Regularizer Paramaters: ', regularizer_dict)
 
     self.loader = model_loader
-    self.jitter = regularizer_params['jitter'] or 8
-    self.rotate = regularizer_params['rotate'] or 10
-    self.scale = regularizer_params['scale'] or 1.2
-    self.TV = regularizer_params['TV'] or -5e-7
-    self.blur = regularizer_params['blur'] or 0
-    self.decorrelate = regularizer_params['decorrelate'] or True
-    self.L1 = regularizer_params['L1'] or 1e-4
+    self.jitter = regularizer_dict['jitter'] if regularizer_dict['jitter'] is not None else 8
+    self.rotate = regularizer_dict['rotate'] if regularizer_dict['rotate'] is not None else 10
+    self.scale = regularizer_dict['scale'] if regularizer_dict['scale'] is not None else 1.2
+    self.TV = regularizer_dict['TV'] if regularizer_dict['TV'] is not None else 0
+    self.blur = regularizer_dict['blur'] if regularizer_dict['blur'] is not None else 0
+    self.decorrelate = regularizer_dict['decorrelate'] if regularizer_dict['decorrelate'] is not None else True
+    self.L1 = regularizer_dict['L1'] if regularizer_dict['L1'] is not None else 1e-4
     self.savepath = savepath
     self.n_channels = n_channels
 
     self.model = self.loader()
-    self.model.load_graphdef()
+    self.model.load_graphdef()  
 
   def show_images(self, images):
     html = ""
@@ -101,20 +102,20 @@ class Feature_Visualizer():
             #print ("calculating kernal loss")
             kernel_loss  += kernel(var_vec[:, i], var_vec[:, j]) + kernel(gram_vec[:, i], gram_vec[:, j]) - 2*kernel(var_vec[:, i], gram_vec[:, j])
         
-        return tf.reduce_mean(T(layer)[..., n_channel]) + 1e-2*kernel_loss + self.L1*tf.norm(var) 
+        return tf.reduce_mean(T(layer)[..., n_channel]) - 1e-2*kernel_loss - self.L1*tf.norm(var) 
       else:
         var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)[0]
-        return tf.reduce_mean(T(layer)[..., n_channel]) + self.L1*tf.norm(var) 
+        return tf.reduce_mean(T(layer)[..., n_channel])  
     return inner
 
   
-  def run(self, layer, channel=None, style_template=None):
+  def run(self, layer, channel=None, style_template=None, transforms = False):
     """
 
     """
-
     self.layer = layer
     self.channel = channel or 0
+    
 
     # layer_to_consider = ['conv2d_3', 'conv2d_5', 'conv2d_7', 'conv2d_13', 'conv2d_15', 'conv2d_17',  'conv2d_21', 'conv2d_23', 'conv2d_25']
 
@@ -125,21 +126,25 @@ class Feature_Visualizer():
                                     dtype=tf.float32) 
 
       obj = self._channel(self.layer+"/convolution", self.channel, gram=style_template)
-      obj += self.TV * objectives.total_variation()
-      obj += self.blur * objectives.blur_input_each_step()
+      obj += -self.L1 * objectives.L1(constant=.5)
+      #obj += self.TV * objectives.total_variation()
+      #obj += self.blur * objectives.blur_input_each_step()
 
-      transforms = [
-        transform.pad(2 * self.jitter),
-        transform.jitter(self.jitter),
-        # transform.random_scale([self.scale ** (n/10.) for n in range(-10, 11)]),
-        transform.random_rotate(range(-self.rotate, self.rotate + 1))
-      ]
+      if transforms == True:
+        transforms = [
+          transform.pad(2 * self.jitter),
+          transform.jitter(self.jitter),
+          # transform.random_scale([self.scale ** (n/10.) for n in range(-10, 11)]),
+          transform.random_rotate(range(-self.rotate, self.rotate + 1))
+        ]
+      else:
+        transforms = []
 
       T = render.make_vis_T(self.model, obj,
                             param_f=lambda: param.image(240, channels=self.n_channels, fft=self.decorrelate,
                                                         decorrelate=self.decorrelate),
                             optimizer=None,
-                            transforms=transforms, relu_gradient_override=True)
+                            transforms=transforms, relu_gradient_override=False)
       tf.initialize_all_variables().run()
 
       # pprint([v.name for v in tf.get_default_graph().as_graph_def().node])

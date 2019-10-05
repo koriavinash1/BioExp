@@ -119,7 +119,7 @@ for layer_, feature_, class_ in zip(layers, feature_maps, classes):
     os.makedirs(save_pth, exist_ok=True)
     E = Feature_Visualizer(Load_Model, savepath = save_pth)
     texture_maps.append(E.run(layer = layer_, # + '_' + str(feature_), 
-						 channel = feature_)) 
+						 channel = feature_, transforms = True)) 
     counter += 1
 
 

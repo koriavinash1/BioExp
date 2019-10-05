@@ -7,15 +7,15 @@ from BioExp.concept.feature import Feature_Visualizer
 # Initialize a class which loads a Lucid Model Instance with the required parameters
 class Load_Model(Model):
 
-  model_path = '../../saved_models/model_flair/flair.pb'
+  model_path = '../../saved_models/model_flair/model.pb'
   image_shape = [None, 1, 240, 240]
-  image_value_range = (0, 1)
+  image_value_range = (0, 10)
   input_name = 'input_1'
 
 # Initialize a Visualizer Instance
-E = Feature_Visualizer(Load_Model, savepath = '../results/')
+E = Feature_Visualizer(Load_Model, savepath = '../results/', regularizer_params={'L1':1e-7})
 
 # Run the Visualizer
-a = E.run(layer = 'conv2d_3', channel = 30)
+a = E.run(layer = 'conv2d_19', channel = 12, transforms=True)
 
 
