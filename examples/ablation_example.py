@@ -2,6 +2,7 @@ import keras
 import numpy as np
 import tensorflow as tf
 from keras.models import load_model
+import pandas as pd
 from glob import glob
 import sys
 import os
@@ -9,6 +10,7 @@ sys.path.append('..')
 from BioExp.helpers import utils
 from BioExp.spatial import ablation
 from losses import *
+import pickle
 
 seq = 'flair'
 model_pb_path = '../../saved_models/model_{}/model.pb'.format(seq)
@@ -51,24 +53,49 @@ def dice_label_metric(y_true, y_pred, label):
 
 data_root_path = '../sample_vol/'
 
-model_path = '/media/balaji/CamelyonProject/parth/saved_models/model_flair/model-archi.h5'
-weights_path = '/media/balaji/CamelyonProject/parth/saved_models/model_flair/model-wts-flair.hdf5'
+model_path = '../../saved_models/model_flair/model-archi.h5'
+weights_path = '../../saved_models/model_flair/model-wts-flair.hdf5'
 
-test_image, gt = utils.load_vol_brats('../sample_vol/Brats18_CBICA_AQT_1', slicen=78)
+layer = 16
+for file in glob(data_root_path +'*')[:2]:
 
-model = load_model(model_path, 
+	model = load_model(model_path, 
 	custom_objects={'gen_dice_loss': gen_dice_loss,'dice_whole_metric':dice_whole_metric,
 	'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
 
-test_image = test_image[:, :, 0].reshape((1, 240, 240, 1))	
+	test_image, gt = utils.load_vol_brats(file, slicen=78)
 
-A = ablation.Ablation(model, weights_path, dice_label_metric, 16, test_image, gt)
+	test_image = test_image[:, :, 0].reshape((1, 240, 240, 1))	
 
-ablation_dict = A.ablate_filter(1)
+	A = ablation.Ablation(model, weights_path, dice_label_metric, layer, test_image, gt)
 
-for item in ablation_dict.values():
-	print(item[:5])
+	ablation_dict = A.ablate_filter(50)
 
+	try:
+		values = pd.concat([values, pd.DataFrame(ablation_dict['value'])], axis=1)	
+	except:
+		values = pd.DataFrame(ablation_dict['value'], columns = ['value'])
+
+mean_value = values.mean(axis=1)
+
+for key in ablation_dict.keys():
+	if key != 'value':
+		try:
+			layer_df = pd.concat([layer_df, pd.DataFrame(ablation_dict[key], columns = [key])], axis=1)	
+		except:
+			layer_df = pd.DataFrame(ablation_dict[key], columns = [key])
+
+layer_df = pd.concat([layer_df, mean_value.rename('value')], axis=1)	
+
+sorted_df = layer_df.sort_values(['class_list', 'value'], ascending=[True, False])
+
+print(sorted_df['class_list'], sorted_df['value'])
+
+json = {'layer':layer, 'class':list(sorted_df['class_list']), 'filter':list(sorted_df['filter']), 'importance':list(sorted_df['value'])}
+
+
+file_ = open(os.path.join('../results/lucid/unet_{}/all_info'.format(seq)), 'wb')
+pickle.dump(json, file_)
 
 # for channel_list in ablation_dict.values():
 # 	for item in channel_list

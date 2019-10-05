@@ -139,7 +139,7 @@ class Feature_Visualizer():
                             param_f=lambda: param.image(240, channels=self.n_channels, fft=self.decorrelate,
                                                         decorrelate=self.decorrelate),
                             optimizer=None,
-                            transforms=[], relu_gradient_override=True)
+                            transforms=transforms, relu_gradient_override=True)
       tf.initialize_all_variables().run()
 
       # pprint([v.name for v in tf.get_default_graph().as_graph_def().node])

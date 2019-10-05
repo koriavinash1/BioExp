@@ -35,19 +35,16 @@ class Ablation():
 
 		for _class in tqdm(range(classes)):
 
-		    weights = np.array(self.model.layers[self.layer].get_weights())
-
 		    for j in tqdm(filters_to_ablate):
 		        #print('Perturbed_Filter = %d' %j)
 		        self.model.load_weights(self.weights, by_name = True)
+		        layer_weights = np.array(self.model.layers[self.layer].get_weights())
 
-		        weights = np.array(self.model.layers[self.layer].get_weights())
-
-		        occluded_weights = weights.copy()
+		        occluded_weights = layer_weights.copy()
 		        occluded_weights[0][:,:,:,j] = 0
 		        occluded_weights[1][j] = 0
 		        self.model.layers[self.layer].set_weights(occluded_weights)
-		        
+
 		        prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1,verbose=0) 
 
 		        layer.append(self.layer)
@@ -61,6 +58,8 @@ class Ablation():
 		    # layer, _filter, class_list, value = layer[sorted_index], _filter[sorted_index], class_list[sorted_index], value[sorted_index]
 
 		json = {'layer': layer, 'filter': _filter, 'class_list': class_list, 'value': value}
+
+		K.clear_session()		
 
 		return(json)
 

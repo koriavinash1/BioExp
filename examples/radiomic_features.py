@@ -17,11 +17,11 @@ class ExtractRadiomicFeatures():
         
         self.img = input_image
         if not input_mask:
-            self.GT = np.ones(tuple(list(self.img.shape)[:-1]))
+            self.GT = np.ones(tuple(list(self.img.shape)))
         else: self.GT = input_mask
         self.GT = sitk.GetImageFromArray(self.GT)
-        self.save_path = save_path
         self.img = sitk.GetImageFromArray(self.img) #, isVector=False)
+        self.save_path = save_path
         self.seq = seq
         self.all_ = all_
         self.class_ = class_
@@ -35,11 +35,13 @@ class ExtractRadiomicFeatures():
         firstOrderFeatures.enableAllFeatures()
         firstOrderFeatures.execute()          
         for (key,val) in six.iteritems(firstOrderFeatures.featureValues):
+            print (key, val)
             if self.all_: 
-                self.feat_dict[self.seq + "_" + self.class_ + '_' + key] = val
+                self.feat_dict[key] = [val]
             else: 
-                feat_dict[self.seq + "_" + self.class_ + "_" + key] = val
+                feat_dict[key] = [val]
 
+        print (feat_dict)
         df = pd.DataFrame(feat_dict)
         if self.save_path:
             df.to_csv(os.path.join(self.save_path, 'firstorder_features.csv'), index=False)
@@ -50,14 +52,14 @@ class ExtractRadiomicFeatures():
     def glcm_features(self):
 
         glcm_dict = {}
-        GLMFeatures = glcm.RadiomicsGLCM(self.img, self.GT)
+        GLCMFeatures = glcm.RadiomicsGLCM(self.img, self.GT)
         GLCMFeatures.enableAllFeatures()
         GLCMFeatures.execute()
         for (key,val) in six.iteritems(GLCMFeatures.featureValues):
             if self.all_: 
-                self.feat_dict[self.seq + "_" + self.class_ + '_' + key] = val
+                self.feat_dict[key] = [val]
             else: 
-                glcm_dict[self.seq + "_" + self.class_ + "_" + key] = val
+                glcm_dict[key] = [val]
 
         df = pd.DataFrame(glcm_dict)
         if self.save_path:
@@ -74,10 +76,10 @@ class ExtractRadiomicFeatures():
         GLSZMFeatures.execute()
         for (key,val) in six.iteritems(GLSZMFeatures.featureValues):
             if self.all_: 
-                self.feat_dict[self.seq + "_" + self.class_ + '_' + key] = val
+                self.feat_dict[key] = [val]
             else: 
-                glszm_dict[self.seq + "_" + self.class_ + "_" + key] = val
-
+                glszm_dict[key] = [val]
+        print (glszm_dict)
         df = pd.DataFrame(glszm_dict)
         if self.save_path:
             df.to_csv(os.path.join(self.save_path, 'glszm_features.csv'), index=False)
@@ -95,10 +97,10 @@ class ExtractRadiomicFeatures():
         GLRLMFeatures.execute()
         for (key,val) in six.iteritems(GLRLMFeatures.featureValues):
             if self.all_: 
-                self.feat_dict[self.seq + "_" + self.class_ + '_' + key] = val
+                self.feat_dict[key] = [val]
             else: 
-                glrlm_dict[self.seq + "_" + self.class_ + "_" + key] = val
-
+                glrlm_dict[key] = [val]
+        print (glrlm_dict)
         df = pd.DataFrame(glrlm_dict)
         if self.save_path:
             df.to_csv(os.path.join(self.save_path, 'glrlm_features.csv'), index=False)
@@ -115,10 +117,11 @@ class ExtractRadiomicFeatures():
         NGTDMFeatures.execute()
         for (key,val) in six.iteritems(NGTDMFeatures.featureValues):
             if self.all_: 
-                self.feat_dict[self.seq + "_" + self.class_ + '_' + key] = val
+                self.feat_dict[key] = [val]
             else: 
-                ngtdm_dict[self.seq + "_" + self.class_ + "_" + key] = val
+                ngtdm_dict[key] = [val]
 
+        print (ngtdm_dict)
         df = pd.DataFrame(ngtdm_dict)
         if self.save_path:
             df.to_csv(os.path.join(self.save_path, 'ngtdm_features.csv'), index=False)
@@ -134,10 +137,11 @@ class ExtractRadiomicFeatures():
         for (key,val) in six.iteritems(GLDMFeatures.featureValues):
 
             if self.all_: 
-                self.feat_dict[self.seq + "_" + self.class_ + '_' + key] = val
+                self.feat_dict[key] = [val]
             else: 
-                gldm_dict[self.seq + "_" + self.class_ + "_" + key] = val
+                gldm_dict[key] = [val]
 
+        print (gldm_dict)
         df = pd.DataFrame(gldm_dict)
         if self.save_path:
             df.to_csv(os.path.join(self.save_path, 'gldm_features.csv'), index=False)
@@ -148,11 +152,11 @@ class ExtractRadiomicFeatures():
     def all_features(self):
 
         _ = self.first_order()
-        _ = glcm_features()
-        _ = glszm_features()
-        _ = glrm_features()
-        _ = gldm_features()
-        _ = ngtdm_features()
+        _ = self.glcm_features()
+        _ = self.glszm_features()
+        _ = self.glrlm_features()
+        _ = self.ngtdm_features()
+        _ = self.gldm_features()
         
         df = pd.DataFrame(self.feat_dict)
 

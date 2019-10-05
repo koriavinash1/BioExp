@@ -86,10 +86,17 @@ def generate_pb(model_path, layer_name, pb_path, wts_path):
                                         'dice_en_metric':dice_en_metric})
         model.load_weights(wts_path)
         print (model.summary())
-        output_graph_def = tf.compat.v1.graph_util.convert_variables_to_constants(
-              session,
-              K.get_session().graph.as_graph_def(),
-              [layer_name + '/convolution']
-          )
+        try:
+            output_graph_def = tf.compat.v1.graph_util.convert_variables_to_constants(
+                session,
+                K.get_session().graph.as_graph_def(),
+                [layer_name + '/convolution']
+            )
+        except:
+            output_graph_def = tf.graph_util.convert_variables_to_constants(
+                session,
+                K.get_session().graph.as_graph_def(),
+                [layer_name + '/convolution']
+            )
         with open(pb_path, "wb") as f:
             f.write(output_graph_def.SerializeToString())

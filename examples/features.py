@@ -19,7 +19,7 @@ import pdb
 
 seq = 'flair'
 model_pb_path  = '../../saved_models/model_{}/model.pb'.format(seq)
-data_root_path = '../../slices/val/patches/'
+data_root_path = '/media/parth/DATA/datasets/brats_slices/_val/patches'
 model_path     = '../../saved_models/model_{}/model-archi.h5'.format(seq)
 weights_path   = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
 
@@ -45,7 +45,7 @@ for layer_name in layers_to_consider:
                             seq=seq)
 
     threshold_maps = dissector.get_threshold_maps(dataset_path = data_root_path,
-                                                    save_path  = '../results/Dissection/unet_{}/threshold_maps/'.format(seq),
+                                                    save_path  = '/media/parth/DATA/datasets/BioExp_results/Dissection/unet_{}/threshold_maps/'.format(seq),
                                                     percentile = 85)
 
 
@@ -59,8 +59,8 @@ for layer_name in layers_to_consider:
                             threshold_maps, 
                             nclasses=4, 
                             nfeatures=None, 
-                            save_path='../results/Dissection/unet_{}/csv/'.format(seq),
-                            save_fmaps='../results/Dissection/unet_{}/feature_maps/'.format(seq), 
+                            save_path='/media/parth/DATA/datasets/BioExp_results/Dissection/unet_{}/csv/'.format(seq),
+                            save_fmaps='/media/parth/DATA/datasets/BioExp_results/Dissection/unet_{}/feature_maps/'.format(seq), 
                             ROI = ROI)
 
     # list all featuremap dice greater than 0.1
@@ -98,15 +98,15 @@ class Load_Model(Model):
 graph_def = tf.GraphDef()
 with open(model_pb_path, "rb") as f:
     graph_def.ParseFromString(f.read())
-for node in graph_def.node:
-    print(node.name)
+# for node in graph_def.node:
+#     print(node.name)
 
 
 print ("==========================")
 texture_maps = []
 print (np.unique(classes))
 
-pdb.set_trace()
+# pdb.set_trace()
 counter  = 0
 for layer_, feature_, class_ in zip(layers, feature_maps, classes):
     # if counter == 2: break
@@ -115,7 +115,7 @@ for layer_, feature_, class_ in zip(layers, feature_maps, classes):
     # Run the Visualizer
     print (layer_, feature_)
     # Initialize a Visualizer Instance
-    save_pth = '../results/lucid/unet_{}/'.format(seq)
+    save_pth = '/media/parth/DATA/datasets/BioExp_results/lucid/unet_{}/'.format(seq)
     os.makedirs(save_pth, exist_ok=True)
     E = Feature_Visualizer(Load_Model, savepath = save_pth)
     texture_maps.append(E.run(layer = layer_, # + '_' + str(feature_), 
@@ -125,24 +125,25 @@ for layer_, feature_, class_ in zip(layers, feature_maps, classes):
 
 json = {'textures': texture_maps, 'class_info': classes, 'features': feature_maps, 'layer_info': layers}
 import pickle
-file_ = open(os.path.join('../results/lucid/unet_{}/all_info'.format(seq)), 'wb')
+pickle_path = '/media/parth/DATA/datasets/BioExp_results/lucid/unet_{}/'.format(seq)
+os.makedirs(pickle_path, exist_ok=True)
+file_ = open(os.path.join(pickle_path, 'all_info'), 'wb')
 pickle.dump(json, file_)
 
 
 # radiomic analysis
 from radiomic_features import ExtractRadiomicFeatures
-print (texture_maps.keys())
-for texture_key in texture_maps.keys():
-    for ii, tmap in enumerate(texture_maps[texture_key]):
-        # create sitk object
-        # ipdb.set_trace()
-        save_path = '../results/RadiomicsAnalysis/unet_{}/'.format(seq) +texture_key+'_'+str(ii)
-        os.makedirs(save_path, exist_ok=True)
-        
-        feat_extractor = ExtractRadiomicFeatures(tmap,
-                                        save_path = save_path)
+for ii, (tmap, class_) in enumerate(zip(texture_maps, classes)):
+    # create sitk object
+    # ipdb.set_trace()
+    save_path = '/media/parth/DATA/datasets/BioExp_results/RadiomicAnalysis/unet_{}/'.format(seq) + 'class_' + str(class_) + '_'+str(ii)
+    os.makedirs(save_path, exist_ok=True)
+    
+    feat_extractor = ExtractRadiomicFeatures(tmap,
+                                    save_path = save_path)
 
-        df = feat_extractor.all_features()  
+    df = feat_extractor.all_features()  
+    print (df)
 
 
 
