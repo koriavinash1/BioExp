@@ -13,7 +13,7 @@ class ExtractRadiomicFeatures():
                     save_path=None, 
                     seq='Flair',
                     class_ = 'ET',
-                    all_=True):
+                    all_ = True):
         
         self.img = input_image
         if not input_mask:

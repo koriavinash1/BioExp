@@ -136,7 +136,7 @@ from radiomic_features import ExtractRadiomicFeatures
 for ii, (tmap, class_) in enumerate(zip(texture_maps, classes)):
     # create sitk object
     # ipdb.set_trace()
-    save_path = '/media/parth/DATA/datasets/BioExp_results/RadiomicAnalysis/unet_{}/'.format(seq) + 'class_' + str(class_) + '_'+str(ii)
+    save_path = '/media/parth/DATA/datasets/BioExp_results/RadiomicAnalysis/unet_{}/class_{}/{}'.format(seq, class_, ii)
     os.makedirs(save_path, exist_ok=True)
     
     feat_extractor = ExtractRadiomicFeatures(tmap,
