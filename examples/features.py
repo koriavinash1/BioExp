@@ -33,7 +33,7 @@ feature_maps = []
 layers = []
 classes = []
 
-layers_to_consider = ['conv2d_5']#, 'conv2d_5', 'conv2d_7', 'conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_17', 'conv2d_19', 'conv2d_21']
+layers_to_consider = ['conv2d_3', 'conv2d_5', 'conv2d_7', 'conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_17', 'conv2d_19'] #, 'conv2d_21']
 input_name = 'input_1'
 
 print (model.summary())
@@ -66,7 +66,7 @@ for layer_name in layers_to_consider:
     # list all featuremap dice greater than 0.1
     n_top = 5
     dice_matrix = df.values[:, 1:]
-    dice_matrix = dice_matrix > 0.1
+    dice_matrix = dice_matrix > 0.5
     feature_info, class_info = np.where(dice_matrix)
     index = np.arange(len(feature_info))
     np.random.shuffle(index)
@@ -108,22 +108,29 @@ print (np.unique(classes))
 
 # pdb.set_trace()
 counter  = 0
+save_pth = '../results/lucid/unet_{}/'.format(seq)
+os.makedirs(save_pth, exist_ok=True)
+
+regularizer_params = {'L1': 1e-8}
+
+E = Feature_Visualizer(Load_Model, 
+			savepath = save_pth, 
+			regularizer_params = regularizer_params)
+
 for layer_, feature_, class_ in zip(layers, feature_maps, classes):
     # if counter == 2: break
     # K.clear_session()
-    # Run the Visualizer
 
     print (layer_, feature_)
     # Initialize a Visualizer Instance
-    save_pth = '../results/lucid/unet_{}/'.format(seq)
-    os.makedirs(save_pth, exist_ok=True)
-    E = Feature_Visualizer(Load_Model, savepath = save_pth)
     texture_maps.append(E.run(layer = layer_, # + '_' + str(feature_), 
-						 channel = feature_, transforms = True)) 
+				channel = feature_, 
+                                transforms = True)) 
     counter += 1
 
 
 json = {'textures': texture_maps, 'class_info': classes, 'features': feature_maps, 'layer_info': layers}
+
 import pickle
 pickle_path = '../results/lucid/unet_{}/'.format(seq)
 os.makedirs(pickle_path, exist_ok=True)
@@ -141,7 +148,7 @@ for class_ in np.unique(classes):
     
     # create sitk object
     # ipdb.set_trace()
-    save_path = '../results/RadiomicAnalysis/unet_{}/class_{}/'.format(seq, class_)
+    save_path = '../results/RadiomicAnalysis/unet_{}/amaps/class_{}/'.format(seq, class_)
     os.makedirs(save_path, exist_ok=True)
     
     tmps = np.array(tmps)
