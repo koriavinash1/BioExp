@@ -80,7 +80,7 @@ class Dissector():
             fmaps = []
             input_paths = os.listdir(dataset_path)
 
-            for i in range(len(input_paths) if len(input_paths) < 50 else 50):
+            for i in range(len(input_paths) if len(input_paths) < 500 else 500):
                 print ("[INFO: BioExp] Slice no {} -- Working on {}".format(self.layer_name, i))
                 input_, label_ = load_numpy_slice(os.path.join(dataset_path, input_paths[i]), 
 					os.path.join(dataset_path, 
