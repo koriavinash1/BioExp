@@ -39,7 +39,7 @@ class Feature_Visualizer():
 
     self.loader = model_loader
     self.jitter = regularizer_dict['jitter'] if regularizer_dict['jitter'] is not None else 8
-    self.rotate = regularizer_dict['rotate'] if regularizer_dict['rotate'] is not None else 10
+    self.rotate = regularizer_dict['rotate'] if regularizer_dict['rotate'] is not None else 4
     self.scale = regularizer_dict['scale'] if regularizer_dict['scale'] is not None else 1.2
     self.TV = regularizer_dict['TV'] if regularizer_dict['TV'] is not None else 0
     self.blur = regularizer_dict['blur'] if regularizer_dict['blur'] is not None else 0
@@ -105,7 +105,7 @@ class Feature_Visualizer():
         return tf.reduce_mean(T(layer)[..., n_channel]) - 1e-2*kernel_loss - self.L1*tf.norm(var) 
       else:
         var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)[0]
-        return tf.reduce_mean(T(layer)[..., n_channel])  
+        return tf.reduce_mean(T(layer)[..., n_channel]) + self.L1*tf.norm(var) 
     return inner
 
   
@@ -139,7 +139,13 @@ class Feature_Visualizer():
         ]
       else:
         transforms = []
-
+      
+      transforms = [
+        transform.pad(2 * 8),
+        transform.jitter(8),
+        # transform.random_scale([SCALE ** (n/10.) for n in range(-10, 11)]),
+        transform.random_rotate(range(-4, 4 + 1))
+      ]
       T = render.make_vis_T(self.model, obj,
                             param_f=lambda: param.image(240, channels=self.n_channels, fft=self.decorrelate,
                                                         decorrelate=self.decorrelate),
@@ -148,10 +154,10 @@ class Feature_Visualizer():
       tf.initialize_all_variables().run()
 
       # pprint([v.name for v in tf.get_default_graph().as_graph_def().node])
-      for i in range(400):
+      for i in range(1000):
         T("vis_op").run()
 
-      plt.figure(figsize=(30,10))
+      plt.figure(figsize=(10,10))
       
       texture_images = []
 

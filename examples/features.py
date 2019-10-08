@@ -19,7 +19,7 @@ import pdb
 
 seq = 'flair'
 model_pb_path  = '../../saved_models/model_{}/model.pb'.format(seq)
-data_root_path = '/media/parth/DATA/datasets/brats_slices/_val/patches'
+data_root_path = '../../slices/val/val/patches'
 model_path     = '../../saved_models/model_{}/model-archi.h5'.format(seq)
 weights_path   = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
 
@@ -33,7 +33,7 @@ feature_maps = []
 layers = []
 classes = []
 
-layers_to_consider = ['conv2d_3']#, 'conv2d_5', 'conv2d_7', 'conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_17', 'conv2d_19', 'conv2d_21']
+layers_to_consider = ['conv2d_3', 'conv2d_5', 'conv2d_7', 'conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_17', 'conv2d_19'] #, 'conv2d_21']
 input_name = 'input_1'
 
 print (model.summary())
@@ -45,7 +45,7 @@ for layer_name in layers_to_consider:
                             seq=seq)
 
     threshold_maps = dissector.get_threshold_maps(dataset_path = data_root_path,
-                                                    save_path  = '/media/parth/DATA/datasets/BioExp_results/Dissection/unet_{}/threshold_maps/'.format(seq),
+                                                    save_path  = '../results/Dissection/unet_{}/threshold_maps/'.format(seq),
                                                     percentile = 85)
 
 
@@ -59,14 +59,14 @@ for layer_name in layers_to_consider:
                             threshold_maps, 
                             nclasses=4, 
                             nfeatures=None, 
-                            save_path='/media/parth/DATA/datasets/BioExp_results/Dissection/unet_{}/csv/'.format(seq),
-                            save_fmaps='/media/parth/DATA/datasets/BioExp_results/Dissection/unet_{}/feature_maps/'.format(seq), 
+                            save_path='../results/Dissection/unet_{}/csv/'.format(seq),
+                            save_fmaps='../results/Dissection/unet_{}/feature_maps/'.format(seq), 
                             ROI = ROI)
 
     # list all featuremap dice greater than 0.1
     n_top = 5
     dice_matrix = df.values[:, 1:]
-    dice_matrix = dice_matrix > 0.1
+    dice_matrix = dice_matrix > 0.5
     feature_info, class_info = np.where(dice_matrix)
     index = np.arange(len(feature_info))
     np.random.shuffle(index)
@@ -108,24 +108,31 @@ print (np.unique(classes))
 
 # pdb.set_trace()
 counter  = 0
+save_pth = '../results/lucid/unet_{}/'.format(seq)
+os.makedirs(save_pth, exist_ok=True)
+
+regularizer_params = {'L1': 1e-8}
+
+E = Feature_Visualizer(Load_Model, 
+			savepath = save_pth, 
+			regularizer_params = regularizer_params)
+
 for layer_, feature_, class_ in zip(layers, feature_maps, classes):
     # if counter == 2: break
-    K.clear_session()
-    
-    # Run the Visualizer
+    # K.clear_session()
+
     print (layer_, feature_)
     # Initialize a Visualizer Instance
-    save_pth = '/media/parth/DATA/datasets/BioExp_results/lucid/unet_{}/'.format(seq)
-    os.makedirs(save_pth, exist_ok=True)
-    E = Feature_Visualizer(Load_Model, savepath = save_pth)
     texture_maps.append(E.run(layer = layer_, # + '_' + str(feature_), 
-						 channel = feature_, transforms = True)) 
+				channel = feature_, 
+                                transforms = True)) 
     counter += 1
 
 
 json = {'textures': texture_maps, 'class_info': classes, 'features': feature_maps, 'layer_info': layers}
+
 import pickle
-pickle_path = '/media/parth/DATA/datasets/BioExp_results/lucid/unet_{}/'.format(seq)
+pickle_path = '../results/lucid/unet_{}/'.format(seq)
 os.makedirs(pickle_path, exist_ok=True)
 file_ = open(os.path.join(pickle_path, 'all_info'), 'wb')
 pickle.dump(json, file_)
@@ -133,13 +140,21 @@ pickle.dump(json, file_)
 
 # radiomic analysis
 from radiomic_features import ExtractRadiomicFeatures
-for ii, (tmap, class_) in enumerate(zip(texture_maps, classes)):
+
+for class_ in np.unique(classes):
+    tmps = []
+    for ii, (tmap, _class_) in enumerate(zip(texture_maps, classes)):
+        if class_ == _class_ : tmps.append(tmap[:, :, 0])
+    
     # create sitk object
     # ipdb.set_trace()
-    save_path = '/media/parth/DATA/datasets/BioExp_results/RadiomicAnalysis/unet_{}/class_{}/{}'.format(seq, class_, ii)
+    save_path = '../results/RadiomicAnalysis/unet_{}/amaps/class_{}/'.format(seq, class_)
     os.makedirs(save_path, exist_ok=True)
     
-    feat_extractor = ExtractRadiomicFeatures(tmap,
+    tmps = np.array(tmps)
+    print (tmps.shape)
+    tmps = tmps.transpose(1,2,0)
+    feat_extractor = ExtractRadiomicFeatures(tmps,
                                     save_path = save_path)
 
     df = feat_extractor.all_features()  

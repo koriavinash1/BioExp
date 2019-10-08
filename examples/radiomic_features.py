@@ -16,7 +16,7 @@ class ExtractRadiomicFeatures():
                     all_ = True):
         
         self.img = input_image
-        if not input_mask:
+        if input_mask not None:
             self.GT = np.ones(tuple(list(self.img.shape)))
         else: self.GT = input_mask
         self.GT = sitk.GetImageFromArray(self.GT)
@@ -36,10 +36,8 @@ class ExtractRadiomicFeatures():
         firstOrderFeatures.execute()          
         for (key,val) in six.iteritems(firstOrderFeatures.featureValues):
             print (key, val)
-            if self.all_: 
-                self.feat_dict[key] = [val]
-            else: 
-                feat_dict[key] = [val]
+            self.feat_dict[key] = [val]
+            feat_dict[key] = [val]
 
         print (feat_dict)
         df = pd.DataFrame(feat_dict)
@@ -56,10 +54,8 @@ class ExtractRadiomicFeatures():
         GLCMFeatures.enableAllFeatures()
         GLCMFeatures.execute()
         for (key,val) in six.iteritems(GLCMFeatures.featureValues):
-            if self.all_: 
-                self.feat_dict[key] = [val]
-            else: 
-                glcm_dict[key] = [val]
+            self.feat_dict[key] = [val]
+            glcm_dict[key] = [val]
 
         df = pd.DataFrame(glcm_dict)
         if self.save_path:
@@ -75,10 +71,8 @@ class ExtractRadiomicFeatures():
         GLSZMFeatures.enableAllFeatures()  # On the feature class level, all features are disabled by default.
         GLSZMFeatures.execute()
         for (key,val) in six.iteritems(GLSZMFeatures.featureValues):
-            if self.all_: 
-                self.feat_dict[key] = [val]
-            else: 
-                glszm_dict[key] = [val]
+            self.feat_dict[key] = [val]
+            glszm_dict[key] = [val]
         print (glszm_dict)
         df = pd.DataFrame(glszm_dict)
         if self.save_path:
@@ -96,10 +90,8 @@ class ExtractRadiomicFeatures():
         GLRLMFeatures.enableAllFeatures()  # On the feature class level, all features are disabled by default.
         GLRLMFeatures.execute()
         for (key,val) in six.iteritems(GLRLMFeatures.featureValues):
-            if self.all_: 
-                self.feat_dict[key] = [val]
-            else: 
-                glrlm_dict[key] = [val]
+            self.feat_dict[key] = [val]
+            glrlm_dict[key] = [val]
         print (glrlm_dict)
         df = pd.DataFrame(glrlm_dict)
         if self.save_path:
@@ -116,10 +108,8 @@ class ExtractRadiomicFeatures():
         NGTDMFeatures.enableAllFeatures()  # On the feature class level, all features are disabled by default.
         NGTDMFeatures.execute()
         for (key,val) in six.iteritems(NGTDMFeatures.featureValues):
-            if self.all_: 
-                self.feat_dict[key] = [val]
-            else: 
-                ngtdm_dict[key] = [val]
+            self.feat_dict[key] = [val]
+            ngtdm_dict[key] = [val]
 
         print (ngtdm_dict)
         df = pd.DataFrame(ngtdm_dict)
@@ -136,10 +126,8 @@ class ExtractRadiomicFeatures():
         GLDMFeatures.execute()
         for (key,val) in six.iteritems(GLDMFeatures.featureValues):
 
-            if self.all_: 
-                self.feat_dict[key] = [val]
-            else: 
-                gldm_dict[key] = [val]
+            self.feat_dict[key] = [val]
+            gldm_dict[key] = [val]
 
         print (gldm_dict)
         df = pd.DataFrame(gldm_dict)

@@ -13,7 +13,7 @@ class Load_Model(Model):
   input_name = 'input_1'
 
 # Initialize a Visualizer Instance
-E = Feature_Visualizer(Load_Model, savepath = '../results/', regularizer_params={'L1':1e-7})
+E = Feature_Visualizer(Load_Model, savepath = '../results/', regularizer_params={'L1':1e-4})
 
 # Run the Visualizer
 a = E.run(layer = 'conv2d_19', channel = 12, transforms=True)
