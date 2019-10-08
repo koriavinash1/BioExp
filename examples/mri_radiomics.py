@@ -14,15 +14,17 @@ assert len(all_patients) == len(all_masks)
 
 nclasses = 4
 
+# We need to preprocess the MRI images same as the model before getting radiomic features
+
 for ii in range(nclasses):
 	save_path = '../results/RadiomicAnalysis/unet_{}/MRI/class_{}/'.format(seq, ii)
 	os.makedirs(save_path, exist_ok=True)
 
 	for i, (vol_, mask_) in enumerate(zip(all_patients, all_masks)):
-		if i >= 5: break
+		if i >= 1: break
 
 		vol  = nib.load(vol_).get_data()
-		vol = (vol - np.min(vol))/(np.max(vol) - np.min(vol))
+		#vol = (vol - np.min(vol))/(np.max(vol) - np.min(vol))
 		mask = nib.load(mask_).get_data()
 		mask = np.uint8(mask == ii)
 		pth = os.path.join(save_path, str(i))	
