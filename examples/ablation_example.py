@@ -11,10 +11,11 @@ from BioExp.helpers import utils
 from BioExp.spatial import ablation
 from losses import *
 import pickle
+from lucid.modelzoo.vision_base import Model
+from BioExp.concept.feature import Feature_Visualizer
 
 seq = 'flair'
-model_pb_path = '../../saved_models/model_{}/model.pb'.format(seq)
-data_root_path = '../../slices/val/patches/'
+model_pb_path = '../../saved_models/model_{}/model.pb'.format(seq)	
 model_path = '../../saved_models/model_{}/model-archi.h5'.format(seq)
 weights_path = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
 
@@ -91,56 +92,49 @@ sorted_df = layer_df.sort_values(['class_list', 'value'], ascending=[True, False
 
 print(sorted_df['class_list'], sorted_df['value'])
 
-json = {'layer':layer, 'class':list(sorted_df['class_list']), 'filter':list(sorted_df['filter']), 'importance':list(sorted_df['value'])}
+K.clear_session()
+# Initialize a class which loads a Lucid Model Instance with the required parameters
+from BioExp.helpers.pb_file_generation import generate_pb
+
+if not os.path.exists(model_pb_path):
+    print (model.summary())
+    layer_name = 'conv2d_21'# str(input("Layer Name: "))
+    generate_pb(model_path, layer_name, model_pb_path, weights_path)
+
+input_name = 'input_1' #str(input("Input Name: "))
+class Load_Model(Model):
+    model_path = model_pb_path
+    image_shape = [None, 1, 240, 240]
+    image_value_range = (0, 1)
+    input_name = input_name
 
 
-file_ = open(os.path.join('../results/lucid/unet_{}/all_info'.format(seq)), 'wb')
-pickle.dump(json, file_)
+graph_def = tf.GraphDef()
+with open(model_pb_path, "rb") as f:
+    graph_def.ParseFromString(f.read())
 
-# for channel_list in ablation_dict.values():
-# 	for item in channel_list
+texture_maps = []
 
-
-
-# K.clear_session()
-# # Initialize a class which loads a Lucid Model Instance with the required parameters
-# from BioExp.helpers.pb_file_generation import generate_pb
-
-# if not os.path.exists(model_pb_path):
-#     print (model.summary())
-#     layer_name = 'conv2d_21'# str(input("Layer Name: "))
-#     generate_pb(model_path, layer_name, model_pb_path, weights_path)
-
-# input_name = 'input_1' #str(input("Input Name: "))
-# class Load_Model(Model):
-#     model_path = model_pb_path
-#     image_shape = [None, 1, 240, 240]
-#     image_value_range = (0, 1)
-#     input_name = input_name
-
-
-# graph_def = tf.GraphDef()
-# with open(model_pb_path, "rb") as f:
-#     graph_def.ParseFromString(f.read())
-# for node in graph_def.node:
-#     print(node.name)
-
-
-# print ("==========================")
-# texture_maps = []
-# print (np.unique(classes))
-
-# counter  = 0
-# for layer_, feature_, class_ in zip(layers, feature_maps, classes):
-#     # if counter == 2: break
-#     K.clear_session()
+counter  = 0
+for layer_, feature_, class_ in zip(sorted_df['layer'], sorted_df['filter'], sorted_df['class_list']):
+    # if counter == 2: break
+    K.clear_session()
     
-#     # Run the Visualizer
-#     print (layer_, feature_)
-#     # Initialize a Visualizer Instance
-#     save_pth = '../results/lucid/unet_{}/'.format(seq)
-#     os.makedirs(save_pth, exist_ok=True)
-#     E = Feature_Visualizer(Load_Model, savepath = save_pth)
-#     texture_maps.append(E.run(layer = layer_, # + '_' + str(feature_), 
-# 						 channel = feature_)) 
-#     counter += 1
+    # Run the Visualizer
+    print (layer_, feature_)
+    # Initialize a Visualizer Instance
+    save_pth = '/media/parth/DATA/datasets/BioExp_results/lucid/unet_{}/ablation/'.format(seq)
+    os.makedirs(save_pth, exist_ok=True)
+    E = Feature_Visualizer(Load_Model, savepath = save_pth)
+    texture_maps.append(E.run(layer = model.layers[layer].name, # + '_' + str(feature_), 
+						 channel = feature_, transforms = True)) 
+    counter += 1
+
+
+json = {'texture':texture_maps, 'class':list(sorted_df['class_list']), 'filter':list(sorted_df['filter']), 'layer':layer, 'importance':list(sorted_df['value'])}
+
+
+pickle_path = '/media/parth/DATA/datasets/BioExp_results/lucid/unet_{}/ablation/'.format(seq)
+os.makedirs(pickle_path, exist_ok=True)
+file_ = open(os.path.join(pickle_path, 'all_info'), 'wb')
+pickle.dump(json, file_)
