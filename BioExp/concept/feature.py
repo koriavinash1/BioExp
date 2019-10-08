@@ -44,7 +44,7 @@ class Feature_Visualizer():
     self.TV = regularizer_dict['TV'] if regularizer_dict['TV'] is not None else 0
     self.blur = regularizer_dict['blur'] if regularizer_dict['blur'] is not None else 0
     self.decorrelate = regularizer_dict['decorrelate'] if regularizer_dict['decorrelate'] is not None else True
-    self.L1 = regularizer_dict['L1'] if regularizer_dict['L1'] is not None else 1e-4
+    self.L1 = regularizer_dict['L1'] if regularizer_dict['L1'] is not None else 1e-5
     self.savepath = savepath
     self.n_channels = n_channels
 
@@ -114,7 +114,7 @@ class Feature_Visualizer():
 
     """
     self.layer = layer
-    self.channel = channel or 0
+    self.channel = channel if channel is not None else 0
     
 
     # layer_to_consider = ['conv2d_3', 'conv2d_5', 'conv2d_7', 'conv2d_13', 'conv2d_15', 'conv2d_17',  'conv2d_21', 'conv2d_23', 'conv2d_25']
