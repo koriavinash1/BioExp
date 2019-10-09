@@ -13,6 +13,7 @@ from losses import *
 import pickle
 from lucid.modelzoo.vision_base import Model
 from BioExp.concept.feature import Feature_Visualizer
+from tqdm import tqdm
 
 seq = 'flair'
 model_pb_path = '../../saved_models/model_{}/model.pb'.format(seq)	
@@ -58,7 +59,8 @@ model_path = '../../saved_models/model_flair/model-archi.h5'
 weights_path = '../../saved_models/model_flair/model-wts-flair.hdf5'
 
 layer = 16
-for file in glob(data_root_path +'*')[:2]:
+
+for file in tqdm(glob(data_root_path +'*')[:1]):
 
 	model = load_model(model_path, 
 	custom_objects={'gen_dice_loss': gen_dice_loss,'dice_whole_metric':dice_whole_metric,
@@ -90,51 +92,57 @@ layer_df = pd.concat([layer_df, mean_value.rename('value')], axis=1)
 
 sorted_df = layer_df.sort_values(['class_list', 'value'], ascending=[True, False])
 
-print(sorted_df['class_list'], sorted_df['value'])
+for i in range(4):
+	save_path = '../results/Ablation/unet_{}/layer_{}'.format(seq, layer, i)
+	os.makedirs(save_path, exist_ok=True)
+	class_df = sorted_df.loc[sorted_df['class_list'] == i]
+	class_df.to_csv(save_path +'/class_{}.csv'.format(i))
 
-K.clear_session()
-# Initialize a class which loads a Lucid Model Instance with the required parameters
-from BioExp.helpers.pb_file_generation import generate_pb
+# print(sorted_df['class_list'], sorted_df['value'])
 
-if not os.path.exists(model_pb_path):
-    print (model.summary())
-    layer_name = 'conv2d_21'# str(input("Layer Name: "))
-    generate_pb(model_path, layer_name, model_pb_path, weights_path)
+# K.clear_session()
+# # Initialize a class which loads a Lucid Model Instance with the required parameters
+# from BioExp.helpers.pb_file_generation import generate_pb
 
-input_name = 'input_1' #str(input("Input Name: "))
-class Load_Model(Model):
-    model_path = model_pb_path
-    image_shape = [None, 1, 240, 240]
-    image_value_range = (0, 1)
-    input_name = input_name
+# if not os.path.exists(model_pb_path):
+#     print (model.summary())
+#     layer_name = 'conv2d_21'# str(input("Layer Name: "))
+#     generate_pb(model_path, layer_name, model_pb_path, weights_path)
+
+# input_name = 'input_1' #str(input("Input Name: "))
+# class Load_Model(Model):
+#     model_path = model_pb_path
+#     image_shape = [None, 1, 240, 240]
+#     image_value_range = (0, 1)
+#     input_name = input_name
 
 
-graph_def = tf.GraphDef()
-with open(model_pb_path, "rb") as f:
-    graph_def.ParseFromString(f.read())
+# graph_def = tf.GraphDef()
+# with open(model_pb_path, "rb") as f:
+#     graph_def.ParseFromString(f.read())
 
-texture_maps = []
+# texture_maps = []
 
-counter  = 0
-for layer_, feature_, class_ in zip(sorted_df['layer'], sorted_df['filter'], sorted_df['class_list']):
-    # if counter == 2: break
-    K.clear_session()
+# counter  = 0
+# for layer_, feature_, class_ in zip(sorted_df['layer'], sorted_df['filter'], sorted_df['class_list']):
+#     # if counter == 2: break
+#     K.clear_session()
     
-    # Run the Visualizer
-    print (layer_, feature_)
-    # Initialize a Visualizer Instance
-    save_pth = '/media/parth/DATA/datasets/BioExp_results/lucid/unet_{}/ablation/'.format(seq)
-    os.makedirs(save_pth, exist_ok=True)
-    E = Feature_Visualizer(Load_Model, savepath = save_pth)
-    texture_maps.append(E.run(layer = model.layers[layer].name, # + '_' + str(feature_), 
-						 channel = feature_, transforms = True)) 
-    counter += 1
+#     # Run the Visualizer
+#     print (layer_, feature_)
+#     # Initialize a Visualizer Instance
+#     save_pth = '/media/parth/DATA/datasets/BioExp_results/lucid/unet_{}/ablation/'.format(seq)
+#     os.makedirs(save_pth, exist_ok=True)
+#     E = Feature_Visualizer(Load_Model, savepath = save_pth)
+#     texture_maps.append(E.run(layer = model.layers[layer].name, # + '_' + str(feature_), 
+# 						 channel = feature_, transforms = True)) 
+#     counter += 1
 
 
-json = {'texture':texture_maps, 'class':list(sorted_df['class_list']), 'filter':list(sorted_df['filter']), 'layer':layer, 'importance':list(sorted_df['value'])}
+# json = {'texture':texture_maps, 'class':list(sorted_df['class_list']), 'filter':list(sorted_df['filter']), 'layer':layer, 'importance':list(sorted_df['value'])}
 
 
-pickle_path = '/media/parth/DATA/datasets/BioExp_results/lucid/unet_{}/ablation/'.format(seq)
-os.makedirs(pickle_path, exist_ok=True)
-file_ = open(os.path.join(pickle_path, 'all_info'), 'wb')
-pickle.dump(json, file_)
+# pickle_path = '/media/parth/DATA/datasets/BioExp_results/lucid/unet_{}/ablation/'.format(seq)
+# os.makedirs(pickle_path, exist_ok=True)
+# file_ = open(os.path.join(pickle_path, 'all_info'), 'wb')
+# pickle.dump(json, file_)

@@ -105,7 +105,7 @@ class Feature_Visualizer():
         return tf.reduce_mean(T(layer)[..., n_channel]) - 1e-2*kernel_loss - self.L1*tf.norm(var) 
       else:
         var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)[0]
-        return tf.reduce_mean(T(layer)[..., n_channel]) + self.L1*tf.norm(var) 
+        return tf.reduce_mean(T(layer)[..., n_channel]) #- self.L1*tf.norm(var) 
     return inner
 
   
@@ -140,12 +140,6 @@ class Feature_Visualizer():
       else:
         transforms = []
       
-      transforms = [
-        transform.pad(2 * 8),
-        transform.jitter(8),
-        # transform.random_scale([SCALE ** (n/10.) for n in range(-10, 11)]),
-        transform.random_rotate(range(-4, 4 + 1))
-      ]
       T = render.make_vis_T(self.model, obj,
                             param_f=lambda: param.image(240, channels=self.n_channels, fft=self.decorrelate,
                                                         decorrelate=self.decorrelate),

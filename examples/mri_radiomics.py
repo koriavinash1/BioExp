@@ -24,7 +24,7 @@ for ii in range(nclasses):
 		if i >= 1: break
 
 		vol  = nib.load(vol_).get_data()
-		#vol = (vol - np.min(vol))/(np.max(vol) - np.min(vol))
+		vol = (vol - np.min(vol))/(np.max(vol) - np.min(vol))
 		mask = nib.load(mask_).get_data()
 		mask = np.uint8(mask == ii)
 		pth = os.path.join(save_path, str(i))	
