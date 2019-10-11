@@ -58,46 +58,50 @@ data_root_path = '../sample_vol/'
 model_path = '../../saved_models/model_flair/model-archi.h5'
 weights_path = '../../saved_models/model_flair/model-wts-flair.hdf5'
 
-layer = 16
+model = load_model(model_path, 
+			custom_objects={'gen_dice_loss': gen_dice_loss,'dice_whole_metric':dice_whole_metric,
+			'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
 
-for file in tqdm(glob(data_root_path +'*')[:1]):
+for layer in range(40, 59):
+	if 'conv2d' in model.layers[layer].name:	
+		for file in tqdm(glob(data_root_path +'*')[:10]):
 
-	model = load_model(model_path, 
-	custom_objects={'gen_dice_loss': gen_dice_loss,'dice_whole_metric':dice_whole_metric,
-	'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
+			model = load_model(model_path, 
+			custom_objects={'gen_dice_loss': gen_dice_loss,'dice_whole_metric':dice_whole_metric,
+			'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
 
-	test_image, gt = utils.load_vol_brats(file, slicen=78)
+			test_image, gt = utils.load_vol_brats(file, slicen=78)
 
-	test_image = test_image[:, :, 0].reshape((1, 240, 240, 1))	
+			test_image = test_image[:, :, 0].reshape((1, 240, 240, 1))	
 
-	A = ablation.Ablation(model, weights_path, dice_label_metric, layer, test_image, gt)
+			A = ablation.Ablation(model, weights_path, dice_label_metric, layer, test_image, gt)
 
-	ablation_dict = A.ablate_filter(50)
+			ablation_dict = A.ablate_filter(1)
 
-	try:
-		values = pd.concat([values, pd.DataFrame(ablation_dict['value'])], axis=1)	
-	except:
-		values = pd.DataFrame(ablation_dict['value'], columns = ['value'])
+			try:
+				values = pd.concat([values, pd.DataFrame(ablation_dict['value'])], axis=1)	
+			except:
+				values = pd.DataFrame(ablation_dict['value'], columns = ['value'])
 
-mean_value = values.mean(axis=1)
+		mean_value = values.mean(axis=1)
+		layer_df = None
 
-for key in ablation_dict.keys():
-	if key != 'value':
-		try:
-			layer_df = pd.concat([layer_df, pd.DataFrame(ablation_dict[key], columns = [key])], axis=1)	
-		except:
-			layer_df = pd.DataFrame(ablation_dict[key], columns = [key])
+		for key in ablation_dict.keys():
+			if key != 'value':
+				try:
+					layer_df = pd.concat([layer_df, pd.DataFrame(ablation_dict[key], columns = [key])], axis=1)	
+				except:
+					layer_df = pd.DataFrame(ablation_dict[key], columns = [key])
 
-layer_df = pd.concat([layer_df, mean_value.rename('value')], axis=1)	
+		layer_df = pd.concat([layer_df, mean_value.rename('value')], axis=1)	
 
-sorted_df = layer_df.sort_values(['class_list', 'value'], ascending=[True, False])
+		sorted_df = layer_df.sort_values(['class_list', 'value'], ascending=[True, False])
 
-for i in range(4):
-	save_path = '../results/Ablation/unet_{}/layer_{}'.format(seq, layer, i)
-	os.makedirs(save_path, exist_ok=True)
-	class_df = sorted_df.loc[sorted_df['class_list'] == i]
-	class_df.to_csv(save_path +'/class_{}.csv'.format(i))
-
+		for i in range(4):
+			save_path = '../results/Ablation/unet_{}/'.format(seq, layer) + model.layers[layer].name
+			os.makedirs(save_path, exist_ok=True)
+			class_df = sorted_df.loc[sorted_df['class_list'] == i]
+			class_df.to_csv(save_path +'/class_{}.csv'.format(i))
 # print(sorted_df['class_list'], sorted_df['value'])
 
 # K.clear_session()
