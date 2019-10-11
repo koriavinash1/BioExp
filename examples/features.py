@@ -66,7 +66,7 @@ for layer_name in layers_to_consider:
     # list all featuremap dice greater than 0.1
     n_top = 5
     dice_matrix = df.values[:, 1:]
-    dice_matrix = dice_matrix > 0.5
+    dice_matrix = dice_matrix > 0.3
     feature_info, class_info = np.where(dice_matrix)
     index = np.arange(len(feature_info))
     np.random.shuffle(index)

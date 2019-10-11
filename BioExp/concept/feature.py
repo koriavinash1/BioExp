@@ -15,6 +15,10 @@ from pprint import pprint
 import matplotlib.gridspec as gridspec
 from decorator import decorator
 
+from lucid.optvis.param.color import to_valid_rgb
+from lucid.optvis.param.spatial import pixel_image, fft_image
+
+
 class Feature_Visualizer():
   """
   A class for generating Feature Visualizations of internal filters from a .pb model file (based on Lucid)
@@ -47,7 +51,8 @@ class Feature_Visualizer():
     self.L1 = regularizer_dict['L1'] if regularizer_dict['L1'] is not None else 1e-5
     self.savepath = savepath
     self.n_channels = n_channels
-
+    
+    print(self.jitter, self.rotate)
     self.model = self.loader()
     self.model.load_graphdef()  
 
@@ -109,6 +114,33 @@ class Feature_Visualizer():
     return inner
 
   
+  def image(
+      self,
+      w,
+      h=None,
+      batch=None,
+      sd=None,
+      decorrelate=True,
+      fft=True,
+      alpha=False,
+      channels=None,
+  ):
+      h = h or w
+      batch = batch or 1
+      ch = channels or (4 if alpha else 3)
+      shape = [batch, h, w, ch]
+      param_f = fft_image if fft else pixel_image
+      t = param_f(shape, sd=sd)
+      if channels:
+          output = tf.nn.sigmoid(t)
+          print('wewew')
+      else:
+          output = to_valid_rgb(t[..., :3], decorrelate=decorrelate, sigmoid=True)
+          if alpha:
+              a = tf.nn.sigmoid(t[..., 3:])
+              output = tf.concat([output, a], -1)
+      return output
+
   def run(self, layer, channel=None, style_template=None, transforms = False):
     """
 
@@ -149,6 +181,7 @@ class Feature_Visualizer():
 
       # pprint([v.name for v in tf.get_default_graph().as_graph_def().node])
       for i in range(1000):
+        print(np.std(T("input").eval()))
         T("vis_op").run()
 
       plt.figure(figsize=(10,10))
