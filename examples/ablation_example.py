@@ -30,7 +30,7 @@ def dice_(y_true, y_pred):
 	dice_numerator =2*sum_pr
 	dice_denominator =sum_r+sum_p
 	#print(K.get_value(2*sum_pr), K.get_value(sum_p)+K.get_value(sum_r))
-	dice_score =(dice_numerator+K.epsilon())/(dice_denominator+K.epsilon())
+	dice_score =(dice_numerator+K.epsilon() )/(dice_denominator+K.epsilon())
 	return dice_score
 
 def metric(y_true, y_pred):
@@ -62,8 +62,7 @@ model = load_model(model_path,
 			custom_objects={'gen_dice_loss': gen_dice_loss,'dice_whole_metric':dice_whole_metric,
 			'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
 
-for layer in range(20, 40):
-	K.clear_session()
+for layer in range(40, 59):
 	if 'conv2d' in model.layers[layer].name:	
 		for file in tqdm(glob(data_root_path +'*')[:10]):
 
@@ -103,7 +102,6 @@ for layer in range(20, 40):
 			os.makedirs(save_path, exist_ok=True)
 			class_df = sorted_df.loc[sorted_df['class_list'] == i]
 			class_df.to_csv(save_path +'/class_{}.csv'.format(i))
-
 # print(sorted_df['class_list'], sorted_df['value'])
 
 # K.clear_session()
