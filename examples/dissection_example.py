@@ -19,28 +19,31 @@ model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
                                         'dice_en_metric':dice_en_metric})
 model.load_weights(weights_path)
 
-layer_name = 'conv2d_3'
-dissector = spatial.Dissector(model=model,
-                        layer_name = layer_name)
+layers_to_consider = ['conv2d_17', 'conv2d_19', 'conv2d_21']
 
-threshold_maps = dissector.get_threshold_maps(dataset_path = data_root_path,
-                                                save_path  = '../results/Dissection/densenet/threshold_maps/',
-                                                percentile = 85)
+for layer_name in layers_to_consider:
+
+        dissector = spatial.Dissector(model=model,
+                                layer_name = layer_name)
+
+        threshold_maps = dissector.get_threshold_maps(dataset_path = data_root_path,
+                                                        save_path  = '../results/Dissection/unet_flair/threshold_maps/',
+                                                        percentile = 85)
 
 
-image, gt = utils.load_vol_brats('../sample_vol/Brats18_CBICA_ARZ_1', slicen=78)
+        image, gt = utils.load_vol_brats('../sample_vol/Brats18_CBICA_ARZ_1', slicen=78)
 
-maks_path = '../sample_vol/Brats18_CBICA_ARZ_1/mask.nii.gz'
-ROI = sitk.GetArrayFromImage(sitk.ReadImage(maks_path))[78, :, :]
-dissector.apply_threshold(image, threshold_maps, 
-                        nfeatures=9, 
-                        save_path='../results/Dissection/densenet/feature_maps/', 
-                        ROI = ROI)
+        maks_path = '../sample_vol/Brats18_CBICA_ARZ_1/mask.nii.gz'
+        ROI = sitk.GetArrayFromImage(sitk.ReadImage(maks_path))[78, :, :]
+        dissector.apply_threshold(image, threshold_maps, 
+                                nfeatures=9, 
+                                save_path='../results/Dissection/unet_flair/feature_maps/', 
+                                ROI = ROI)
 
-dissector.quantify_gt_features(image, gt, 
-                        threshold_maps, 
-                        nclasses=4, 
-                        nfeatures=9, 
-                        save_path='../results/Dissection/densenet/csv/',
-                        save_fmaps=False, 
-                        ROI = ROI)
+        dissector.quantify_gt_features(image, gt, 
+                                threshold_maps, 
+                                nclasses=4, 
+                                nfeatures=9, 
+                                save_path='../results/Dissection/unet_flair/csv/',
+                                save_fmaps=False, 
+                                ROI = ROI)
