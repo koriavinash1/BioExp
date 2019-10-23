@@ -6,7 +6,7 @@ import pandas as pd
 from glob import glob
 import sys
 import os
-sys.path.append('..')
+sys.path.append('../../')
 from BioExp.helpers import utils
 from BioExp.spatial import ablation
 from BioExp.helpers.losses import *
@@ -20,9 +20,6 @@ seq = 'flair'
 model_pb_path = '../../saved_models/model_{}/model.pb'.format(seq)	
 model_path = '../../saved_models/model_{}/model-archi.h5'.format(seq)
 weights_path = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
-
-
-
 data_root_path = '../sample_vol/'
 
 model_path = '../../saved_models/model_flair/model-archi.h5'

@@ -30,7 +30,7 @@ def _normalize(slice):
         return slice
     else:
         tmp= (slice - np.mean(image_nonzero)) / np.std(image_nonzero)
-        tmp[tmp==tmp.min()]=-9
+        # tmp[tmp==tmp.min()]=-9
         return tmp
 
 def load_vol_brats( rootpath, 
