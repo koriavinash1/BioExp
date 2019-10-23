@@ -3,7 +3,7 @@ matplotlib.use('Agg')
 import sys
 sys.path.append('..')
 from BioExp import spatial
-from BioExp.helpers import utils
+from BioExp.helpers import utils, radfeatures
 import SimpleITK as sitk
 from keras.models import load_model
 from losses import *
@@ -98,6 +98,7 @@ class Load_Model(Model):
 graph_def = tf.GraphDef()
 with open(model_pb_path, "rb") as f:
     graph_def.ParseFromString(f.read())
+
 # for node in graph_def.node:
 #     print(node.name)
 
@@ -139,8 +140,6 @@ pickle.dump(json, file_)
 
 
 # radiomic analysis
-from radiomic_features import ExtractRadiomicFeatures
-
 for class_ in np.unique(classes):
     tmps = []
     for ii, (tmap, _class_) in enumerate(zip(texture_maps, classes)):
@@ -154,7 +153,7 @@ for class_ in np.unique(classes):
     tmps = np.array(tmps)
     print (tmps.shape)
     tmps = tmps.transpose(1,2,0)
-    feat_extractor = ExtractRadiomicFeatures(tmps,
+    feat_extractor = radfeatures.ExtractRadiomicFeatures(tmps,
                                     save_path = save_path)
 
     df = feat_extractor.all_features()  
