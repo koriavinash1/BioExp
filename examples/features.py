@@ -18,10 +18,10 @@ import matplotlib.pyplot as plt
 import pdb
 
 seq = 'flair'
-model_pb_path  = '../../saved_models/model_{}/model.pb'.format(seq)
-data_root_path = '../../slices/val/val/patches'
-model_path     = '../../saved_models/model_{}/model-archi.h5'.format(seq)
-weights_path   = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
+model_pb_path  = '../../saved_models/model_{}_scaled/model.pb'.format(seq)
+data_root_path = '/media/brats/mirlproject2/parth/slices_scaled/val/patches'
+model_path     = '../../saved_models/model_{}_scaled/model-archi.h5'.format(seq)
+weights_path   = '../../saved_models/model_{}_scaled/model-wts-{}.hdf5'.format(seq, seq)
 
 model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
                                         'dice_whole_metric':dice_whole_metric,
@@ -33,7 +33,7 @@ feature_maps = []
 layers = []
 classes = []
 
-layers_to_consider = ['conv2d_3', 'conv2d_5', 'conv2d_7', 'conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_17', 'conv2d_19'] #, 'conv2d_21']
+layers_to_consider = ['conv2d_3', 'conv2d_4', 'conv2d_5', 'conv2d_6', 'conv2d_7', 'conv2d_8', 'conv2d_9', 'conv2d_10', 'conv2d_11', 'conv2d_12', 'conv2d_13', 'conv2d_14', 'conv2d_15', 'conv2d_16', 'conv2d_17', 'conv2d_18', 'conv2d_19', 'conv2d_20', 'conv2d_21']
 input_name = 'input_1'
 
 print (model.summary())
@@ -45,7 +45,7 @@ for layer_name in layers_to_consider:
                             seq=seq)
 
     threshold_maps = dissector.get_threshold_maps(dataset_path = data_root_path,
-                                                    save_path  = '../results/Dissection/unet_{}/threshold_maps/'.format(seq),
+                                                    save_path  = '../results_scaled/Dissection/unet_{}/threshold_maps/'.format(seq),
                                                     percentile = 85)
 
 
@@ -59,8 +59,8 @@ for layer_name in layers_to_consider:
                             threshold_maps, 
                             nclasses=4, 
                             nfeatures=None, 
-                            save_path='../results/Dissection/unet_{}/csv/'.format(seq),
-                            save_fmaps='../results/Dissection/unet_{}/feature_maps/'.format(seq), 
+                            save_path='/media/brats/mirlproject2/parth/results_scaled/Dissection/unet_{}/csv/'.format(seq),
+                            save_fmaps='/media/brats/mirlproject2/parth/results_scaled/Dissection/unet_{}/feature_maps/'.format(seq), 
                             ROI = ROI)
 
     # list all featuremap dice greater than 0.1
@@ -108,7 +108,7 @@ print (np.unique(classes))
 
 # pdb.set_trace()
 counter  = 0
-save_pth = '../results/lucid/unet_{}/'.format(seq)
+save_pth = '/media/brats/mirlproject2/parth/results_scaled/lucid/unet_{}/'.format(seq)
 os.makedirs(save_pth, exist_ok=True)
 
 regularizer_params = {'L1': 1e-8}
@@ -132,7 +132,7 @@ for layer_, feature_, class_ in zip(layers, feature_maps, classes):
 json = {'textures': texture_maps, 'class_info': classes, 'features': feature_maps, 'layer_info': layers}
 
 import pickle
-pickle_path = '../results/lucid/unet_{}/'.format(seq)
+pickle_path = '/media/brats/mirlproject2/parth/results_scaled/lucid/unet_{}/'.format(seq)
 os.makedirs(pickle_path, exist_ok=True)
 file_ = open(os.path.join(pickle_path, 'all_info'), 'wb')
 pickle.dump(json, file_)
@@ -148,7 +148,7 @@ for class_ in np.unique(classes):
     
     # create sitk object
     # ipdb.set_trace()
-    save_path = '../results/RadiomicAnalysis/unet_{}/amaps/class_{}/'.format(seq, class_)
+    save_path = '/media/brats/mirlproject2/parth/results_scaled/RadiomicAnalysis/unet_{}/amaps/class_{}/'.format(seq, class_)
     os.makedirs(save_path, exist_ok=True)
     
     tmps = np.array(tmps)
