@@ -12,8 +12,8 @@ for _feature_type_ in feature_types:
 	mriclass = []
 	amapclass = []
 	for class_ in range(nclasses):
-		mri_features = glob('../results/RadiomicAnalysis/unet_{}/MRI/class_{}/*/{}.csv'.format(seq, class_,_feature_type_))
-		amaps_features = glob('../results/RadiomicAnalysis/unet_{}/amaps/class_{}/{}.csv'.format(seq, class_,_feature_type_))
+		mri_features = glob('/media/brats/mirlproject2/parth/results_scaled/RadiomicAnalysis/unet_{}/MRI/class_{}/*/{}.csv'.format(seq, class_,_feature_type_))
+		amaps_features = glob('/media/brats/mirlproject2/parth/results_scaled/RadiomicAnalysis/unet_{}/amaps/class_{}/{}.csv'.format(seq, class_,_feature_type_))
 		
 		# print (mri_features, amaps_features)
 		mri_values = pd.read_csv(mri_features[0]).values

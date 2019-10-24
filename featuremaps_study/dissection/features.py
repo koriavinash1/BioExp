@@ -1,27 +1,39 @@
 import matplotlib
 matplotlib.use('Agg')
-import sys
-sys.path.append('..')
+import sys, os
+sys.path.append('../../')
 from BioExp import spatial
-from BioExp.helpers import utils
+from BioExp.helpers import utils, radfeatures
 import SimpleITK as sitk
 from keras.models import load_model
-from losses import *
+from BioExp.helpers.losses import *
 
 from lucid.modelzoo.vision_base import Model
-import sys, os
-sys.path.append('..')
 from BioExp.concept.feature import Feature_Visualizer
 from keras import backend as K 
 import matplotlib.pyplot as plt
 
 import pdb
+import argparse
 
-seq = 'flair'
-model_pb_path  = '../../saved_models/model_{}/model.pb'.format(seq)
-data_root_path = '../../slices/val/val/patches'
-model_path     = '../../saved_models/model_{}/model-archi.h5'.format(seq)
-weights_path   = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
+parser = argparse.ArgumentParser(description='feature study')
+parser.add_argument('--seq', default='flair', type=str, help='mri sequence')
+parser = parser.parse_args()
+
+seq = parser.seq
+
+model_pb_path     = '../../../saved_models/model_{}_scaled/model.pb'.format(seq)
+model_path        = '../../../saved_models/model_{}_scaled/model-archi.h5'.format(seq)
+weights_path      = '../../../saved_models/model_{}_scaled/model-wts-{}.hdf5'.format(seq, seq)
+
+data_root_path    = '/media/brats/mirlproject2/parth/slices_scaled/val/patches'
+results_root_path = '/media/brats/mirlproject2/parth/results_scaled/'
+
+layers_to_consider = ['conv2d_3', 'conv2d_4', 'conv2d_5', 'conv2d_6', 'conv2d_7', 'conv2d_8', 'conv2d_9', 'conv2d_10', 'conv2d_11', 'conv2d_12', 'conv2d_13', 'conv2d_14', 'conv2d_15', 'conv2d_16', 'conv2d_17', 'conv2d_18', 'conv2d_19', 'conv2d_20', 'conv2d_21']
+input_name = 'input_1'
+
+
+#########################################################################
 
 model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
                                         'dice_whole_metric':dice_whole_metric,
@@ -33,8 +45,6 @@ feature_maps = []
 layers = []
 classes = []
 
-layers_to_consider = ['conv2d_3', 'conv2d_5', 'conv2d_7', 'conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_17', 'conv2d_19'] #, 'conv2d_21']
-input_name = 'input_1'
 
 print (model.summary())
 
@@ -45,13 +55,13 @@ for layer_name in layers_to_consider:
                             seq=seq)
 
     threshold_maps = dissector.get_threshold_maps(dataset_path = data_root_path,
-                                                    save_path  = '../results/Dissection/unet_{}/threshold_maps/'.format(seq),
+                                                    save_path  = os.path.join(results_root_path, 'Dissection/unet_{}/threshold_maps/'.format(seq)),
                                                     percentile = 85)
 
 
-    image, gt = utils.load_vol_brats('../sample_vol/Brats18_CBICA_APR_1', slicen=103)
+    image, gt = utils.load_vol_brats('../../sample_vol/Brats18_CBICA_APR_1', slicen=103)
     image = image[:, :, 3][..., None]
-    maks_path = '../sample_vol/Brats18_CBICA_APR_1/mask.nii.gz'
+    maks_path = '../../sample_vol/Brats18_CBICA_APR_1/mask.nii.gz'
     ROI = sitk.GetArrayFromImage(sitk.ReadImage(maks_path))[103, :, :]
 
     print (layer_name)
@@ -59,12 +69,12 @@ for layer_name in layers_to_consider:
                             threshold_maps, 
                             nclasses=4, 
                             nfeatures=None, 
-                            save_path='../results/Dissection/unet_{}/csv/'.format(seq),
-                            save_fmaps='../results/Dissection/unet_{}/feature_maps/'.format(seq), 
+                            save_path  = os.path.join(results_root_path, 'Dissection/unet_{}/csv/'.format(seq)),
+                            save_fmaps = os.path.join(results_root_path, 'Dissection/unet_{}/feature_maps/'.format(seq)), 
                             ROI = ROI)
 
     # list all featuremap dice greater than 0.1
-    n_top = 5
+    n_top = 50
     dice_matrix = df.values[:, 1:]
     dice_matrix = dice_matrix > 0.3
     feature_info, class_info = np.where(dice_matrix)
@@ -75,6 +85,8 @@ for layer_name in layers_to_consider:
     layers.extend([layer_name]*len(feature_info))
     feature_maps.extend(feature_info)
     classes.extend(class_info)
+
+
 
 # import ipdb
 #ipdb.set_trace()
@@ -98,6 +110,7 @@ class Load_Model(Model):
 graph_def = tf.GraphDef()
 with open(model_pb_path, "rb") as f:
     graph_def.ParseFromString(f.read())
+
 # for node in graph_def.node:
 #     print(node.name)
 
@@ -108,7 +121,7 @@ print (np.unique(classes))
 
 # pdb.set_trace()
 counter  = 0
-save_pth = '../results/lucid/unet_{}/'.format(seq)
+save_pth = os.path.join(results_root_path, 'lucid/unet_{}/'.format(seq))
 os.makedirs(save_pth, exist_ok=True)
 
 regularizer_params = {'L1': 1e-8}
@@ -132,15 +145,13 @@ for layer_, feature_, class_ in zip(layers, feature_maps, classes):
 json = {'textures': texture_maps, 'class_info': classes, 'features': feature_maps, 'layer_info': layers}
 
 import pickle
-pickle_path = '../results/lucid/unet_{}/'.format(seq)
+pickle_path = os.path.join(results_root_path, 'lucid/unet_{}/'.format(seq))
 os.makedirs(pickle_path, exist_ok=True)
 file_ = open(os.path.join(pickle_path, 'all_info'), 'wb')
 pickle.dump(json, file_)
 
 
 # radiomic analysis
-from radiomic_features import ExtractRadiomicFeatures
-
 for class_ in np.unique(classes):
     tmps = []
     for ii, (tmap, _class_) in enumerate(zip(texture_maps, classes)):
@@ -148,17 +159,15 @@ for class_ in np.unique(classes):
     
     # create sitk object
     # ipdb.set_trace()
-    save_path = '../results/RadiomicAnalysis/unet_{}/amaps/class_{}/'.format(seq, class_)
+    save_path = os.path.join(results_root_path, 'RadiomicAnalysis/unet_{}/amaps/class_{}/'.format(seq, class_))
     os.makedirs(save_path, exist_ok=True)
     
     tmps = np.array(tmps)
     print (tmps.shape)
     tmps = tmps.transpose(1,2,0)
-    feat_extractor = ExtractRadiomicFeatures(tmps,
+    feat_extractor = radfeatures.ExtractRadiomicFeatures(tmps,
                                     save_path = save_path)
 
     df = feat_extractor.all_features()  
     print (df)
-
-
 

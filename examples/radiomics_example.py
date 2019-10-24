@@ -4,7 +4,7 @@ import pickle
 import os
 from glob import glob
 import nibabel as nib
-from radiomic_features import ExtractRadiomicFeatures
+from BioExp.helpers import radfeatures
 import cv2
 
 nclasses = 4
@@ -23,5 +23,5 @@ image = (image - np.min(image))/(np.max(image) - np.min(image))
 pth = os.path.join(save_path, str(layer), str(_filter))
 mask = np.ones(image.shape)
 os.makedirs(pth, exist_ok=True)
-feat_extractor = ExtractRadiomicFeatures(image, mask, save_path = pth)
+feat_extractor = radfeatures.ExtractRadiomicFeatures(image, mask, save_path = pth)
 df = feat_extractor.all_features()

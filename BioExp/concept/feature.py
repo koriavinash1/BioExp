@@ -52,7 +52,7 @@ class Feature_Visualizer():
     self.savepath = savepath
     self.n_channels = n_channels
     
-    print(self.jitter, self.rotate)
+    print("jitter: {}, rotate: {}".format(self.jitter, self.rotate))
     self.model = self.loader()
     self.model.load_graphdef()  
 
@@ -133,7 +133,6 @@ class Feature_Visualizer():
       t = param_f(shape, sd=sd)
       if channels:
           output = tf.nn.sigmoid(t)
-          print('wewew')
       else:
           output = to_valid_rgb(t[..., :3], decorrelate=decorrelate, sigmoid=True)
           if alpha:
@@ -181,7 +180,6 @@ class Feature_Visualizer():
 
       # pprint([v.name for v in tf.get_default_graph().as_graph_def().node])
       for i in range(1000):
-        print(np.std(T("input").eval()))
         T("vis_op").run()
 
       plt.figure(figsize=(10,10))
@@ -191,7 +189,7 @@ class Feature_Visualizer():
       for i in range(1, self.n_channels+1):
         plt.subplot(1, self.n_channels, i)
         image = T("input").eval()[:, :, :, i - 1].reshape((240, 240))
-        print(image.min(), image.max())
+        print("channel: ", i, image.min(), image.max())
         plt.imshow(image, cmap='gray',
                    interpolation='bilinear', vmin=0., vmax=1.)
         plt.xticks([])
