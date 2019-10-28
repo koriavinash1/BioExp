@@ -67,14 +67,14 @@ for layer_name in layers_to_consider:
     print (layer_name)
     _, df = dissector.quantify_gt_features(image, gt, 
                             threshold_maps, 
-                            nclasses=4, 
+                            nclasses=2, 
                             nfeatures=None, 
-                            save_path  = os.path.join(results_root_path, 'Dissection/unet_{}/csv/'.format(seq)),
-                            save_fmaps = os.path.join(results_root_path, 'Dissection/unet_{}/feature_maps/'.format(seq)), 
+                            save_path  = os.path.join(results_root_path, 'Dissection/unet_{}/csv_whole/'.format(seq)),
+                            save_fmaps = os.path.join(results_root_path, 'Dissection/unet_{}/feature_maps_whole/'.format(seq)), 
                             ROI = ROI)
 
     # list all featuremap dice greater than 0.1
-    n_top = 50
+    n_top = 5
     dice_matrix = df.values[:, 1:]
     dice_matrix = dice_matrix > 0.3
     feature_info, class_info = np.where(dice_matrix)
@@ -87,10 +87,13 @@ for layer_name in layers_to_consider:
     classes.extend(class_info)
 
 
+exit()
+#########################################################################
 
 # import ipdb
 #ipdb.set_trace()
 K.clear_session()
+
 # Initialize a class which loads a Lucid Model Instance with the required parameters
 from BioExp.helpers.pb_file_generation import generate_pb
 
@@ -124,7 +127,7 @@ counter  = 0
 save_pth = os.path.join(results_root_path, 'lucid/unet_{}/'.format(seq))
 os.makedirs(save_pth, exist_ok=True)
 
-regularizer_params = {'L1': 1e-8}
+regularizer_params = {'L1':1e-5, 'rotate':10}
 
 E = Feature_Visualizer(Load_Model, 
 			savepath = save_pth, 
@@ -142,7 +145,10 @@ for layer_, feature_, class_ in zip(layers, feature_maps, classes):
     counter += 1
 
 
-json = {'textures': texture_maps, 'class_info': classes, 'features': feature_maps, 'layer_info': layers}
+json = {'textures': texture_maps, 
+	'class_info': classes, 
+	'features': feature_maps, 
+	'layer_info': layers}
 
 import pickle
 pickle_path = os.path.join(results_root_path, 'lucid/unet_{}/'.format(seq))
@@ -150,6 +156,7 @@ os.makedirs(pickle_path, exist_ok=True)
 file_ = open(os.path.join(pickle_path, 'all_info'), 'wb')
 pickle.dump(json, file_)
 
+#########################################################################
 
 # radiomic analysis
 for class_ in np.unique(classes):

@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import lucid.optvis.param as param
 import lucid.optvis.render as render
 from lucid.misc.io.showing import _image_url, _display_html
@@ -104,13 +106,12 @@ class Feature_Visualizer():
         kernel_loss = 0
         for i in range(4):
           for j in range(4):
-            #print ("calculating kernal loss")
             kernel_loss  += kernel(var_vec[:, i], var_vec[:, j]) + kernel(gram_vec[:, i], gram_vec[:, j]) - 2*kernel(var_vec[:, i], gram_vec[:, j])
         
         return tf.reduce_mean(T(layer)[..., n_channel]) - 1e-2*kernel_loss - self.L1*tf.norm(var) 
       else:
         var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)[0]
-        return tf.reduce_mean(T(layer)[..., n_channel]) #- self.L1*tf.norm(var) 
+        return tf.reduce_mean(T(layer)[..., n_channel]) # + tf.math.reduce_std(var)  - self.L1*tf.norm(var) 
     return inner
 
   
@@ -172,7 +173,7 @@ class Feature_Visualizer():
         transforms = []
       
       T = render.make_vis_T(self.model, obj,
-                            param_f=lambda: param.image(240, channels=self.n_channels, fft=self.decorrelate,
+                            param_f=lambda: self.image(240, channels=self.n_channels, fft=self.decorrelate,
                                                         decorrelate=self.decorrelate),
                             optimizer=None,
                             transforms=transforms, relu_gradient_override=False)

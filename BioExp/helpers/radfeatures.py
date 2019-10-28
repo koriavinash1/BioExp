@@ -16,7 +16,7 @@ class ExtractRadiomicFeatures():
                     all_ = True):
         
         self.img = input_image
-        if not input_mask:
+        if not input_mask.any():
             self.GT = np.ones(tuple(list(self.img.shape)))
         else: self.GT = input_mask
         self.GT = sitk.GetImageFromArray(self.GT)

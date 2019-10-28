@@ -22,29 +22,23 @@ model_path = '../../saved_models/model_{}/model-archi.h5'.format(seq)
 weights_path = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
 data_root_path = '../sample_vol/'
 
-model_path = '../../saved_models/model_flair/model-archi.h5'
-weights_path = '../../saved_models/model_flair/model-wts-flair.hdf5'
-
 layer = 16
+model = load_model(model_path, 
+			custom_objects={'gen_dice_loss': gen_dice_loss,
+			'dice_whole_metric':dice_whole_metric,
+			'dice_core_metric':dice_core_metric,
+			'dice_en_metric':dice_en_metric})
 
 for file in tqdm(glob(data_root_path +'*')[:1]):
 
-	model = load_model(model_path, 
-	custom_objects={'gen_dice_loss': gen_dice_loss,'dice_whole_metric':dice_whole_metric,
-	'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
-
 	test_image, gt = utils.load_vol_brats(file, slicen=78)
-
 	test_image = test_image[:, :, 0].reshape((1, 240, 240, 1))	
 
 	A = ablation.Ablation(model, weights_path, dice_label_metric, layer, test_image, gt)
-
 	ablation_dict = A.ablate_filter(50)
 
-	try:
-		values = pd.concat([values, pd.DataFrame(ablation_dict['value'])], axis=1)	
-	except:
-		values = pd.DataFrame(ablation_dict['value'], columns = ['value'])
+	try: values = pd.concat([values, pd.DataFrame(ablation_dict['value'])], axis=1)	
+	except: values = pd.DataFrame(ablation_dict['value'], columns = ['value'])
 
 mean_value = values.mean(axis=1)
 

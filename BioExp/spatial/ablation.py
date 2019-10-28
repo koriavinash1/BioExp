@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import keras
 import numpy as np
 import tensorflow as tf
@@ -9,7 +12,7 @@ from tqdm import tqdm
 
 class Ablation():
 
-	def __init__(self, model, weights, metric, layer, test_image, gt):
+	def __init__(self, model, weights, metric, layer, test_image, gt, mode='whole'):
 		
 		self.model = model
 		self.weights = weights
@@ -17,6 +20,7 @@ class Ablation():
 		self.test_image = test_image
 		self.layer = layer
 		self.gt = gt
+		self.mode = mode
 
 
 	def ablate_filter(self, step):
@@ -27,41 +31,91 @@ class Ablation():
 
 		filters_to_ablate = np.arange(0, self.model.layers[self.layer].get_weights()[0].shape[-1], step)
 		            
-		print('Layer = %s' %self.model.layers[self.layer].name)
+		#print('Layer = %s' %self.model.layers[self.layer].name)
 		self.model.load_weights(self.weights, by_name = True)
 
 		#predicts each volume and save the results in np array
 		prediction_unshaped = self.model.predict(self.test_image,batch_size=1,verbose=0)
 
-		for _class in tqdm(range(classes)):
+		if self.mode == 'whole':
 
-		    for j in tqdm(filters_to_ablate):
-		        #print('Perturbed_Filter = %d' %j)
-		        self.model.load_weights(self.weights, by_name = True)
-		        layer_weights = np.array(self.model.layers[self.layer].get_weights())
+			for j in filters_to_ablate:
+				#print('Perturbed_Filter = %d' %j)
+				self.model.load_weights(self.weights, by_name = True)
+				layer_weights = np.array(self.model.layers[self.layer].get_weights())
 
-		        occluded_weights = layer_weights.copy()
-		        occluded_weights[0][:,:,:,j] = 0
-		        occluded_weights[1][j] = 0
-		        self.model.layers[self.layer].set_weights(occluded_weights)
+				occluded_weights = layer_weights.copy()
+				occluded_weights[0][:,:,:,j] = 0
+				occluded_weights[1][j] = 0
+				self.model.layers[self.layer].set_weights(occluded_weights)
 
-		        prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1,verbose=0) 
+				prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1,verbose=0) 
 
-		        layer.append(self.layer)
-		        _filter.append(j)
-		        class_list.append(_class)
-		        value.append(K.get_value(self.metric(np_utils.to_categorical(self.gt, num_classes=4), 
-		        	np_utils.to_categorical(prediction_unshaped.argmax(axis = -1), num_classes=4), _class)) - K.get_value(self.metric(np_utils.to_categorical(self.gt, num_classes=4), 
-		        	np_utils.to_categorical(prediction_unshaped_occluded.argmax(axis = -1), num_classes=4), _class)))
+				plt.clf()
+				plt.subplot(1, 3, 1)
+				plt.imshow(prediction_unshaped.argmax(axis = -1))
+				plt.subplot(1, 3, 2)
+				plt.imshow(prediction_unshaped_occluded.argmax(axis = -1))
+				plt.subplot(1, 3, 3)
+				plt.imshow(self.test_image)
+				plt.savefig(str(j) + '.png')
+				layer.append(self.layer)
+				_filter.append(j)
+				class_list.append('whole')
+				value.append(self.metric(np_utils.to_categorical(self.gt, num_classes=4), 
+					np_utils.to_categorical(prediction_unshaped.argmax(axis = -1), num_classes=4)) - self.metric(np_utils.to_categorical(self.gt, num_classes=4), 
+					np_utils.to_categorical(prediction_unshaped_occluded.argmax(axis = -1), num_classes=4)))
 
-		    # sorted_index = np.argsort(np.array(value))
-		    # layer, _filter, class_list, value = layer[sorted_index], _filter[sorted_index], class_list[sorted_index], value[sorted_index]
+				# sorted_index = np.argsort(np.array(value))
+				# layer, _filter, class_list, value = layer[sorted_index], _filter[sorted_index], class_list[sorted_index], value[sorted_index]
 
-		json = {'layer': layer, 'filter': _filter, 'class_list': class_list, 'value': value}
+			json = {'layer': layer, 'filter': _filter, 'class_list': class_list, 'value': value}
 
-		K.clear_session()		
+			#K.clear_session()		
 
-		return(json)
+			return(json)
+
+		else:
+
+			for _class in tqdm(range(classes)):
+
+			    for j in tqdm(filters_to_ablate):
+			        #print('Perturbed_Filter = %d' %j)
+			        self.model.load_weights(self.weights, by_name = True)
+			        layer_weights = np.array(self.model.layers[self.layer].get_weights())
+
+			        occluded_weights = layer_weights.copy()
+			        occluded_weights[0][:,:,:,j] = 0
+			        occluded_weights[1][j] = 0
+			        self.model.layers[self.layer].set_weights(occluded_weights)
+
+			        prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1,verbose=0) 
+			        """
+			        plt.clf()
+			        plt.subplot(1, 3, 1)
+			        plt.imshow(prediction_unshaped.argmax(axis = -1)[0])
+			        plt.subplot(1, 3, 2)
+			        plt.imshow(prediction_unshaped_occluded.argmax(axis = -1)[0])
+			        plt.subplot(1, 3, 3)
+			        plt.imshow(self.test_image[0,...,0])
+			        plt.savefig(str(self.layer) + '_' + str(j) + '.png')
+			        """
+			        layer.append(self.layer)
+			        _filter.append(j)
+			        class_list.append(_class)
+			        value.append(self.metric(np_utils.to_categorical(self.gt, num_classes=4), 
+					np_utils.to_categorical(prediction_unshaped_occluded.argmax(axis = -1), num_classes=4), _class))
+			
+                            # self.metric(np_utils.to_categorical(self.gt, num_classes=4), np_utils.to_categorical(prediction_unshaped.argmax(axis = -1), num_classes=4),  _class) - 
+					
+			    # sorted_index = np.argsort(np.array(value))
+			    # layer, _filter, class_list, value = layer[sorted_index], _filter[sorted_index], class_list[sorted_index], value[sorted_index]
+
+			json = {'layer': layer, 'filter': _filter, 'class_list': class_list, 'value': value}
+
+					
+
+			return(json)
 
 
 # if __name__ == '__main__':
