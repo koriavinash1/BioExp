@@ -203,7 +203,7 @@ class Dissector():
                             post_process_threshold=80,
                             ROI = None):
         """
-            Quantify the learnt internal concepts by a network, 
+            Quatify the learnt internal concepts by a network, 
             only valid for segmentation networks 
 
             image : image (H x W x C)

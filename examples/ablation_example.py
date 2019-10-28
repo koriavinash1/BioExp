@@ -22,8 +22,8 @@ seq = 'flair'
 
 data_root_path = '../sample_vol/'
 
-
 seq_to_consider = ['flair', 't1c', 't2', 't1']
+
 
 for seq in seq_to_consider:
 	model_pb_path = '../../saved_models/model_{}/model.pb'.format(seq)	
@@ -81,12 +81,9 @@ for seq in seq_to_consider:
 					class_df = sorted_df
 					class_df.to_csv(save_path +'/class_{}.csv'.format('whole'))
 				else:
-					class_df = sorted_df.loc[sorted_df['class_list'] == i]
-
-					class_df.to_csv(save_path +'/class_{}.csv'.format(i))
-
-			del layer_df, mean_value, values
-
+					for i in range(4):
+						class_df = sorted_df.loc[sorted_df['class_list'] == i]
+						class_df.to_csv(save_path +'/class_{}.csv'.format(i))
 # print(sorted_df['class_list'], sorted_df['value'])
 
 # K.clear_session()
