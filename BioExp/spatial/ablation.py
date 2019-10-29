@@ -1,6 +1,3 @@
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 import keras
 import numpy as np
 import tensorflow as tf
@@ -39,7 +36,7 @@ class Ablation():
 
 		if self.mode == 'whole':
 
-			for j in filters_to_ablate:
+			for j in tqdm(filters_to_ablate):
 				#print('Perturbed_Filter = %d' %j)
 				self.model.load_weights(self.weights, by_name = True)
 				layer_weights = np.array(self.model.layers[self.layer].get_weights())
@@ -51,14 +48,6 @@ class Ablation():
 
 				prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1,verbose=0) 
 
-				plt.clf()
-				plt.subplot(1, 3, 1)
-				plt.imshow(prediction_unshaped.argmax(axis = -1))
-				plt.subplot(1, 3, 2)
-				plt.imshow(prediction_unshaped_occluded.argmax(axis = -1))
-				plt.subplot(1, 3, 3)
-				plt.imshow(self.test_image)
-				plt.savefig(str(j) + '.png')
 				layer.append(self.layer)
 				_filter.append(j)
 				class_list.append('whole')
@@ -90,30 +79,20 @@ class Ablation():
 			        self.model.layers[self.layer].set_weights(occluded_weights)
 
 			        prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1,verbose=0) 
-			        """
-			        plt.clf()
-			        plt.subplot(1, 3, 1)
-			        plt.imshow(prediction_unshaped.argmax(axis = -1)[0])
-			        plt.subplot(1, 3, 2)
-			        plt.imshow(prediction_unshaped_occluded.argmax(axis = -1)[0])
-			        plt.subplot(1, 3, 3)
-			        plt.imshow(self.test_image[0,...,0])
-			        plt.savefig(str(self.layer) + '_' + str(j) + '.png')
-			        """
+
 			        layer.append(self.layer)
 			        _filter.append(j)
 			        class_list.append(_class)
 			        value.append(self.metric(np_utils.to_categorical(self.gt, num_classes=4), 
-					np_utils.to_categorical(prediction_unshaped_occluded.argmax(axis = -1), num_classes=4), _class))
-			
-                            # self.metric(np_utils.to_categorical(self.gt, num_classes=4), np_utils.to_categorical(prediction_unshaped.argmax(axis = -1), num_classes=4),  _class) - 
-					
+			        	np_utils.to_categorical(prediction_unshaped.argmax(axis = -1), num_classes=4), _class) - self.metric(np_utils.to_categorical(self.gt, num_classes=4), 
+			        	np_utils.to_categorical(prediction_unshaped_occluded.argmax(axis = -1), num_classes=4), _class))
+
 			    # sorted_index = np.argsort(np.array(value))
 			    # layer, _filter, class_list, value = layer[sorted_index], _filter[sorted_index], class_list[sorted_index], value[sorted_index]
 
 			json = {'layer': layer, 'filter': _filter, 'class_list': class_list, 'value': value}
 
-					
+			#K.clear_session()		
 
 			return(json)
 

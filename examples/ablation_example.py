@@ -16,6 +16,10 @@ import pickle
 from lucid.modelzoo.vision_base import Model
 from BioExp.concept.feature import Feature_Visualizer
 from tqdm import tqdm
+from keras.backend.tensorflow_backend import set_session
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.3
+set_session(tf.Session(config=config))
 
 seq = 'flair'
 
@@ -26,10 +30,11 @@ seq_to_consider = ['flair', 't1c', 't2', 't1']
 
 
 for seq in seq_to_consider:
+
 	model_pb_path = '../../saved_models/model_{}/model.pb'.format(seq)	
 	model_path = '../../saved_models/model_{}/model-archi.h5'.format(seq)
 	weights_path = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
-	mode = None	
+	mode = 'label'
 	model = load_model(model_path, 
 			custom_objects={'gen_dice_loss': gen_dice_loss,'dice_whole_metric':dice_whole_metric,
 			'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
@@ -45,7 +50,7 @@ for seq in seq_to_consider:
 
 		if 'conv2d' in model.layers[layer].name:	
 			print(model.layers[layer].name)
-			for file in tqdm(glob(data_root_path +'*')[:2]):
+			for file in tqdm(glob(data_root_path +'*')[:10]):
 
 				test_image, gt = utils.load_vol_brats(file, slicen=78)
 
@@ -84,6 +89,8 @@ for seq in seq_to_consider:
 					for i in range(4):
 						class_df = sorted_df.loc[sorted_df['class_list'] == i]
 						class_df.to_csv(save_path +'/class_{}.csv'.format(i))
+
+			del values, layer_df, mean_value
 # print(sorted_df['class_list'], sorted_df['value'])
 
 # K.clear_session()
