@@ -9,55 +9,127 @@ import os
 sys.path.append('../../')
 from BioExp.helpers import utils
 from BioExp.spatial import ablation
-from BioExp.helpers.losses import *
+#from BioExp.helpers.losses import *
+from BioExp.spatial.losses import *
 from BioExp.helpers.metrics import *
 import pickle
 from lucid.modelzoo.vision_base import Model
 from BioExp.concept.feature import Feature_Visualizer
 from tqdm import tqdm
+from keras.backend.tensorflow_backend import set_session
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.3
+set_session(tf.Session(config=config))
 
 seq = 'flair'
-model_pb_path = '../../saved_models/model_{}/model.pb'.format(seq)	
-model_path = '../../saved_models/model_{}/model-archi.h5'.format(seq)
-weights_path = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
-data_root_path = '../sample_vol/'
 
-layer = 16
-model = load_model(model_path, 
-			custom_objects={'gen_dice_loss': gen_dice_loss,
-			'dice_whole_metric':dice_whole_metric,
-			'dice_core_metric':dice_core_metric,
-			'dice_en_metric':dice_en_metric})
 
-for file in tqdm(glob(data_root_path +'*')[:1]):
+data_root_path = '../../sample_vol/'
 
-	test_image, gt = utils.load_vol_brats(file, slicen=78)
-	test_image = test_image[:, :, 0].reshape((1, 240, 240, 1))	
+seq_to_consider = ['flair']#, 't1c', 't2', 't1']
 
-	A = ablation.Ablation(model, weights_path, dice_label_metric, layer, test_image, gt)
-	ablation_dict = A.ablate_filter(50)
 
-	try: values = pd.concat([values, pd.DataFrame(ablation_dict['value'])], axis=1)	
-	except: values = pd.DataFrame(ablation_dict['value'], columns = ['value'])
+for seq in seq_to_consider:
 
-mean_value = values.mean(axis=1)
+	model_pb_path = '../../../saved_models/model_{}/model.pb'.format(seq)	
+	model_path = '../../../saved_models/model_{}/model-archi.h5'.format(seq)
+	weights_path = '../../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
+	mode = 'whole'
+	model = load_model(model_path, 
+			custom_objects={'gen_dice_loss': gen_dice_loss,'dice_whole_metric':dice_whole_metric,
+			'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
+	print("Models Loaded")
+	for layer in range(0, 59):
 
-for key in ablation_dict.keys():
-	if key != 'value':
-		try:
-			layer_df = pd.concat([layer_df, pd.DataFrame(ablation_dict[key], columns = [key])], axis=1)	
-		except:
-			layer_df = pd.DataFrame(ablation_dict[key], columns = [key])
+		if mode == 'whole': 
+			metric = dice_whole_coef
+			n_classes = 1
+		else:
+			metric = dice_label_coef
+			n_classes=4
 
-layer_df = pd.concat([layer_df, mean_value.rename('value')], axis=1)	
+		if 'conv2d' in model.layers[layer].name:	
+			print(model.layers[layer].name)
+			for file in tqdm(glob(data_root_path +'*')[:10]):
 
-sorted_df = layer_df.sort_values(['class_list', 'value'], ascending=[True, False])
+				test_image, gt = utils.load_vol_brats(file, slicen=78)
 
-for i in range(4):
-	save_path = '../results/Ablation/unet_{}/layer_{}'.format(seq, layer, i)
-	os.makedirs(save_path, exist_ok=True)
-	class_df = sorted_df.loc[sorted_df['class_list'] == i]
-	class_df.to_csv(save_path +'/class_{}.csv'.format(i))
+				test_image = test_image[:, :, 0].reshape((1, 240, 240, 1))	
+
+				A = ablation.Ablation(model, weights_path, metric, layer, test_image, gt, mode=mode)
+
+				ablation_dict = A.ablate_filter(1)
+
+				try:
+					values = pd.concat([values, pd.DataFrame(ablation_dict['value'])], axis=1)	
+				except:
+					values = pd.DataFrame(ablation_dict['value'], columns = ['value'])
+
+
+			mean_value = values.mean(axis=1)
+
+			for key in ablation_dict.keys():
+				if key != 'value':
+					try:
+						layer_df = pd.concat([layer_df, pd.DataFrame(ablation_dict[key], columns = [key])], axis=1)	
+					except:
+						layer_df = pd.DataFrame(ablation_dict[key], columns = [key])
+
+			layer_df = pd.concat([layer_df, mean_value.rename('value')], axis=1)	
+
+			sorted_df = layer_df.sort_values(['class_list', 'value'], ascending=[True, False])
+
+			for i in range(n_classes):
+				save_path = '../results/Ablation/unet_{}/'.format(seq) + model.layers[layer].name
+				os.makedirs(save_path, exist_ok=True)
+				if mode == 'whole':
+					class_df = sorted_df
+					class_df.to_csv(save_path +'/class_{}.csv'.format('whole'))
+					texture_maps = []
+
+					# pdb.set_trace()
+					counter  = 0
+					save_pth = os.path.join('lucid/unet_{}/'.format(seq))
+					os.makedirs(save_pth, exist_ok=True)
+
+					regularizer_params = {'L1':1e-5, 'rotate':10}
+
+					E = Feature_Visualizer(Load_Model, 
+								savepath = save_pth, 
+								regularizer_params = regularizer_params)
+					
+					nidx = 5
+					feature_maps = class_df['filter'].values[:nidx]
+					layers = [model.layers[layer].name]*nidx				
+					for layer_, feature_ in zip(layers, feature_maps):
+
+
+					    print (layer_, feature_)
+					    # Initialize a Visualizer Instance
+					    texture_maps.append(E.run(layer = layer_, # + '_' + str(feature_), 
+									channel = feature_, 
+									transforms = True)) 
+					    counter += 1
+
+
+					json = {'textures': texture_maps, 
+						'class_info': 'whole', 
+						'features': feature_maps, 
+						'layer_info': layers}
+
+					import pickle
+					pickle_path = os.path.join('lucid/unet_{}/'.format(seq))
+					os.makedirs(pickle_path, exist_ok=True)
+					file_ = open(os.path.join(pickle_path, 'all_info'), 'wb')
+					pickle.dump(json, file_)
+				else:
+					for i in range(4):
+						class_df = sorted_df.loc[sorted_df['class_list'] == i]
+						class_df.to_csv(save_path +'/class_{}.csv'.format(i))
+
+
+			del values, layer_df, mean_value
+
 
 # print(sorted_df['class_list'], sorted_df['value'])
 
