@@ -4,14 +4,14 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-import vis
 import cv2
-from vis.utils import utils
 from keras import activations
-from vis.visualization import visualize_cams
 
 from ..helpers.utils import *
 
+import vis
+from vis.visualization import visualize_cam
+from vis.utils import utils
 
 def cam(model, img, gt, 
 	nclasses = 2, 
@@ -22,15 +22,16 @@ def cam(model, img, gt,
 	"""
 	"""
 	model.layers[layer_idx].activation = activations.linear
-    	model = utils.apply_modifications(model)
+	# model = utils.apply_modifications(model)
+	# print(model.summary())
 	num_layers = sum([model.layers[layer].name.__contains__('conv') for layer in range(1, len(model.layers))])
 	
 	layer_dice = np.zeros((num_layers, nclasses))
 	
 	counter = 0
 	for layer in range(1, len(model.layers)):
-		if 'conv' in model.layers[layer].name:
-	
+		if 'conv' not in model.layers[layer].name: continue
+		
 		if save_path:
 			plt.figure(figsize=(30, 10))
 			gs = gridspec.GridSpec(1, 3)
@@ -38,8 +39,7 @@ def cam(model, img, gt,
 
 		for class_ in range(nclasses):
 			grads_ = visualize_cam(model, layer_idx, filter_indices=class_, penultimate_layer_idx = layer,  
-                                	seed_input = test_image[None, ...], backprop_modifier = modifier) 
-
+						seed_input = img[None, ...], backprop_modifier = modifier)
 			if save_path:
 				ax = plt.subplot(gs[class_ -1])
 				im = ax.imshow(grads_, cmap=plt.cm.RdBu)

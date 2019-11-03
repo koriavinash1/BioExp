@@ -26,8 +26,8 @@ model_pb_path     = '../../../saved_models/model_{}_scaled/model.pb'.format(seq)
 model_path        = '../../../saved_models/model_{}_scaled/model-archi.h5'.format(seq)
 weights_path      = '../../../saved_models/model_{}_scaled/model-wts-{}.hdf5'.format(seq, seq)
 
-data_root_path    = '/media/brats/mirlproject2/parth/slices_scaled/val/patches'
-results_root_path = '/media/brats/mirlproject2/parth/results_scaled/'
+data_root_path    = '../../../slices_scaled/val/patches'
+results_root_path = '../../../results_scaled/'
 
 layers_to_consider = ['conv2d_2', 'conv2d_3', 'conv2d_4', 'conv2d_5', 'conv2d_6', 'conv2d_7', 'conv2d_8', 'conv2d_9', 'conv2d_10', 'conv2d_11', 'conv2d_12', 'conv2d_13', 'conv2d_14', 'conv2d_15', 'conv2d_16', 'conv2d_17', 'conv2d_18', 'conv2d_19', 'conv2d_20', 'conv2d_21']
 input_name = 'input_1'
@@ -60,15 +60,19 @@ for layer_name in layers_to_consider:
                                                     percentile = 85)
 
 
-    image, gt = utils.load_vol_brats('../../sample_vol/Brats18_CBICA_APR_1', slicen=103)
+    image, gt = utils.load_vol_brats('../../sample_vol/brats/Brats18_CBICA_APR_1', slicen=103)
     image = image[:, :, 3][..., None]
-    maks_path = '../../sample_vol/Brats18_CBICA_APR_1/mask.nii.gz'
+    maks_path = '../../sample_vol/brats/Brats18_CBICA_APR_1/mask.nii.gz'
     ROI = sitk.GetArrayFromImage(sitk.ReadImage(maks_path))[103, :, :]
 
     print (layer_name)
+    infoclasses = {}
+    # for i in range(nclasses): classes['class_'+str(i)] = (i,)
+    infoclasses['whole'] = (1,2,3)
+
     _, df = dissector.quantify_gt_features(image, gt, 
                             threshold_maps, 
-                            nclasses=4, 
+                            nclasses=infoclasses, 
                             nfeatures=None, 
                             save_path  = os.path.join(results_root_path, 'Dissection/unet_{}/csv/'.format(seq)),
                             save_fmaps = os.path.join(results_root_path, 'Dissection/unet_{}/feature_maps/'.format(seq)), 
