@@ -197,3 +197,19 @@ def load_numpy_slice(img_path, mask_path=None, seq='t1'):
         return img[:, :, seq][..., None], mask[...,None]
     return img[:, :, seq][..., None]
 
+
+def load_images(img_path, normalize=True, zscore=False, mask=True):
+    """
+    """
+    if not mask:
+        img = np.array(PIL.open(img_path).convert('RGB'))
+    else:
+        img = np.array(PIL.open(img_path).convert('L'))
+    
+    if normalize:
+        img = (img - np.min(img))/(np.max(img) - np.min(img))
+
+    if zscore:
+        img = (img - np.mean(img))/ np.std(img)
+    
+

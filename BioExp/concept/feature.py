@@ -19,7 +19,7 @@ from decorator import decorator
 
 from lucid.optvis.param.color import to_valid_rgb
 from lucid.optvis.param.spatial import pixel_image, fft_image
-
+import os
 
 class Feature_Visualizer():
   """
@@ -141,7 +141,7 @@ class Feature_Visualizer():
               output = tf.concat([output, a], -1)
       return output
 
-  def run(self, layer, channel=None, style_template=None, transforms = False):
+  def run(self, layer, class_, channel=None, style_template=None, transforms = False):
     """
 
     """
@@ -150,7 +150,7 @@ class Feature_Visualizer():
     
 
     # layer_to_consider = ['conv2d_3', 'conv2d_5', 'conv2d_7', 'conv2d_13', 'conv2d_15', 'conv2d_17',  'conv2d_21', 'conv2d_23', 'conv2d_25']
-
+    print ("Hello .................")
     with tf.Graph().as_default() as graph, tf.Session() as sess:
 
       if style_template is not None:
@@ -167,7 +167,7 @@ class Feature_Visualizer():
           transform.pad(2 * self.jitter),
           transform.jitter(self.jitter),
           # transform.random_scale([self.scale ** (n/10.) for n in range(-10, 11)]),
-          transform.random_rotate(range(-self.rotate, self.rotate + 1))
+          # transform.random_rotate(range(-self.rotate, self.rotate + 1))
         ]
       else:
         transforms = []
@@ -197,5 +197,6 @@ class Feature_Visualizer():
         plt.yticks([])
         texture_images.append(image)
         # show(np.hstack(T("input").eval()))
-    plt.savefig(self.savepath+self.layer+'_' + str(self.channel) +'.png', bbox_inches='tight')
+    os.makedirs(os.path.join(self.savepath, class_), exist_ok=True)
+    plt.savefig(os.path.join(self.savepath, class_, self.layer+'_' + str(self.channel) +'.png'), bbox_inches='tight')
     return np.array(texture_images).transpose(1, 2, 0)

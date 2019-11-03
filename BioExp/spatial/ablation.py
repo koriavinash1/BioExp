@@ -24,7 +24,8 @@ class Ablation():
 
 		layer, _filter, class_list, value = [], [], [], []
 
-		classes = self.model.layers[-1].output.shape[-1]
+		#classes = self.model.layers[-1].output.shape[-1]
+		classes = 1
 
 		filters_to_ablate = np.arange(0, self.model.layers[self.layer].get_weights()[0].shape[-1], step)
 		            

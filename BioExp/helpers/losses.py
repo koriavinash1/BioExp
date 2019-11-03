@@ -1,6 +1,7 @@
 import numpy as np
 import keras.backend as K
 import tensorflow as tf
+from tensorflow.keras.losses import categorical_crossentropy
 
 def dice(y_true, y_pred):
     #computes the dice score on two tensors
@@ -66,6 +67,14 @@ def dice_core_metric(y_true, y_pred):
     return dice_core
 
 
+
+def softmax_dice_loss(y_true, y_pred):
+    return (categorical_crossentropy(y_true, y_pred) * 0.5 \
+         + dice_coef_loss(y_true[..., 0], y_pred[..., 0]) * 0.25 \
+         + dice_coef_loss(y_true[..., 1], y_pred[..., 1]) * 0.25)
+
+def dice_coef_loss(y_true, y_pred):
+    return 1 - (dice_coef(y_true, y_pred))
 
 def weighted_log_loss(y_true, y_pred):
     # scale predictions so that the class probas of each sample sum to 1
