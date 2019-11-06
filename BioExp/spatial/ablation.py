@@ -1,11 +1,12 @@
 import keras
 import numpy as np
 import tensorflow as tf
-from keras.models import load_model
 from glob import glob
+import pandas as pd
+from tqdm import tqdm
 import keras.backend as K
 from keras.utils import np_utils
-from tqdm import tqdm
+from keras.models import load_model
 
 class Ablation():
 
@@ -52,15 +53,14 @@ class Ablation():
 			self.model.layers[layer_idx].set_weights(occluded_weights)			
 			prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1, verbose=0) 
 
-
-			for _class in self.classinfo.keys():
-				dice_json['feature'].append(j)
-				dice_json[_class].append(self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
+			dice_json['feature'].append(j)
+			for class_ in self.classinfo.keys():
+				dice_json[class_].append(self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
 			        				np_utils.to_categorical(prediction_unshaped.argmax(axis = -1), 
-											num_classes=self.nclasses), self.classinfo[_class]) - \
+											num_classes=self.nclasses), self.classinfo[class_]) - \
 					     		self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
 			        					np_utils.to_categorical(prediction_unshaped_occluded.argmax(axis = -1), 
-											num_classes=self.nclasses), self.classinfo[_class]))
+											num_classes=self.nclasses), self.classinfo[class_]))
 
 
 		df = pd.DataFrame(dice_json)

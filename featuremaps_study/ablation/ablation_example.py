@@ -62,15 +62,16 @@ classes = []
 
 for layer_name in layers_to_consider:	
 	print(layer_name)
-	for file in tqdm(glob(data_root_path +'*')[:num_images]):
+	for i, file in tqdm(enumerate(glob(data_root_path +'*')[:num_images])):
 		test_image, gt = utils.load_vol_brats(file, slicen=78)
 		test_image = test_image[:, :, 0].reshape((1, 240, 240, 1))	
 
 		A = ablation.Ablation(model, weights_path, metric, layer_name, test_image, gt, classes = infoclasses)
-		try:
-			df.add(A.ablate_filter(step = 1))	
-		except:
+		if i == 0:
 			df = A.ablate_filter(step = 1)
+		else:
+			df += A.ablate_filter(step = 1)
+			
 	df = df/(1. * num_images)
 	save_path = 'results/Ablation/unet_{}/csv/{}/'.format(seq, layer_name)
 	os.makedirs(save_path, exist_ok=True)
