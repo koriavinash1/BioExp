@@ -67,7 +67,7 @@ for layer_name in layers_to_consider:
 
     print (layer_name)
     infoclasses = {}
-    # for i in range(nclasses): classes['class_'+str(i)] = (i,)
+    for i in range(1): infoclasses['class_'+str(i)] = (i,)
     infoclasses['whole'] = (1,2,3)
 
     _, df = dissector.quantify_gt_features(image, gt, 
@@ -79,9 +79,9 @@ for layer_name in layers_to_consider:
                             ROI = ROI)
 
     # list all featuremap dice greater than 0.1
-    n_top = -1
+    n_top = 5
     dice_matrix = df.values[:, 1:]
-    dice_matrix = dice_matrix > 0.3
+    dice_matrix = dice_matrix > 0.5
     feature_info, class_info = np.where(dice_matrix)
     index = np.arange(len(feature_info))
     np.random.shuffle(index)

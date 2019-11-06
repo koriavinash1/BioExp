@@ -157,14 +157,14 @@ def dice_core_coef(y_true, y_pred):
     #print(y_whole.shape)
     return(dice_coef(y_whole, p_whole))
 
-def dice_label_coef(y_true, y_pred, label):
+def dice_label_coef(y_true, y_pred, labels):
 
     y_true = np.reshape(y_true, (-1, 4))
     y_pred = np.reshape(y_pred, (-1, 4))
+    
+    y_whole = np.sum(y_true[:, list(label)], axis = 1)
+    p_whole = np.sum(y_pred[:, list(label)], axis = 1)
 
-    y_whole = y_true[:, label]
-    p_whole = y_pred[:, label]
-    #print(y_whole.shape)
     return(dice_coef(y_whole, p_whole))
 
 def dice_en_coef(y_true, y_pred):

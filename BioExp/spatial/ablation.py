@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 class Ablation():
 
-	def __init__(self, model, weights, metric, layer, test_image, gt, mode='whole'):
+	def __init__(self, model, weights, metric, layer, test_image, gt, classes, nclasses=4):
 		
 		self.model = model
 		self.weights = weights
@@ -18,78 +18,40 @@ class Ablation():
 		self.layer = layer
 		self.gt = gt
 		self.mode = mode
+		self.classinfo = classes
+		self.nclasses = nclasses
 
 
 	def ablate_filter(self, step):
 
 		layer, _filter, class_list, value = [], [], [], []
-
-		#classes = self.model.layers[-1].output.shape[-1]
-		classes = 1
-
 		filters_to_ablate = np.arange(0, self.model.layers[self.layer].get_weights()[0].shape[-1], step)
 		            
 		#print('Layer = %s' %self.model.layers[self.layer].name)
 		self.model.load_weights(self.weights, by_name = True)
 
 		#predicts each volume and save the results in np array
-		prediction_unshaped = self.model.predict(self.test_image,batch_size=1,verbose=0)
+		prediction_unshaped = self.model.predict(self.test_image, batch_size=1, verbose=0)
+		for j in tqdm(filters_to_ablate):
+			#print('Perturbed_Filter = %d' %j)
+			self.model.load_weights(self.weights, by_name = True)
+			layer_weights = np.array(self.model.layers[self.layer].get_weights())
+			occluded_weights = layer_weights.copy()
+			occluded_weights[0][:,:,:,j] = 0
+			occluded_weights[1][j] = 0
+			self.model.layers[self.layer].set_weights(occluded_weights)			
+			prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1,verbose=0) 
 
-		if self.mode == 'whole':
 
-			for j in tqdm(filters_to_ablate):
-				#print('Perturbed_Filter = %d' %j)
-				self.model.load_weights(self.weights, by_name = True)
-				layer_weights = np.array(self.model.layers[self.layer].get_weights())
-
-				occluded_weights = layer_weights.copy()
-				occluded_weights[0][:,:,:,j] = 0
-				occluded_weights[1][j] = 0
-				self.model.layers[self.layer].set_weights(occluded_weights)
-
-				prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1,verbose=0) 
-
+			for _class in self.classinfo.keys():
 				layer.append(self.layer)
 				_filter.append(j)
-				class_list.append('whole')
-				value.append(self.metric(np_utils.to_categorical(self.gt, num_classes=4), 
-					np_utils.to_categorical(prediction_unshaped.argmax(axis = -1), num_classes=4)) - self.metric(np_utils.to_categorical(self.gt, num_classes=4), 
-					np_utils.to_categorical(prediction_unshaped_occluded.argmax(axis = -1), num_classes=4)))
+				class_list.append(_class)
+				value.append(self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
+			        			np_utils.to_categorical(prediction_unshaped.argmax(axis = -1), num_classes=self.nclasses), self.classinfo[_class]) - \
+					     self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
+			        			np_utils.to_categorical(prediction_unshaped_occluded.argmax(axis = -1), num_classes=self.nclasses), self.classinfo[_class]))
 
-				# sorted_index = np.argsort(np.array(value))
-				# layer, _filter, class_list, value = layer[sorted_index], _filter[sorted_index], class_list[sorted_index], value[sorted_index]
-
-			json = {'layer': layer, 'filter': _filter, 'class_list': class_list, 'value': value}
-
-			#K.clear_session()		
-
-			return(json)
-
-		else:
-
-			for _class in tqdm(range(classes)):
-
-			    for j in tqdm(filters_to_ablate):
-			        #print('Perturbed_Filter = %d' %j)
-			        self.model.load_weights(self.weights, by_name = True)
-			        layer_weights = np.array(self.model.layers[self.layer].get_weights())
-
-			        occluded_weights = layer_weights.copy()
-			        occluded_weights[0][:,:,:,j] = 0
-			        occluded_weights[1][j] = 0
-			        self.model.layers[self.layer].set_weights(occluded_weights)
-
-			        prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1,verbose=0) 
-
-			        layer.append(self.layer)
-			        _filter.append(j)
-			        class_list.append(_class)
-			        value.append(self.metric(np_utils.to_categorical(self.gt, num_classes=4), 
-			        	np_utils.to_categorical(prediction_unshaped.argmax(axis = -1), num_classes=4), _class) - self.metric(np_utils.to_categorical(self.gt, num_classes=4), 
-			        	np_utils.to_categorical(prediction_unshaped_occluded.argmax(axis = -1), num_classes=4), _class))
-
-			    # sorted_index = np.argsort(np.array(value))
-			    # layer, _filter, class_list, value = layer[sorted_index], _filter[sorted_index], class_list[sorted_index], value[sorted_index]
 
 			json = {'layer': layer, 'filter': _filter, 'class_list': class_list, 'value': value}
 
