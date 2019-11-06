@@ -169,9 +169,8 @@ for ii, (tmap, _class_) in enumerate(zip(texture_maps, classes)):
 	save_path = os.path.join('results/Ablation/unet_{}/RadiomicAnalysis/amaps/class_{}/{}'.format(seq, class_, ii))
 	os.makedirs(save_path, exist_ok=True)
     
-	tmps = np.array(tmap[None, ...])
+	tmps = np.array(tmap)
 	print (tmps.shape)
-	tmps = tmps.transpose(1,2,0)
 	feat_extractor = radfeatures.ExtractRadiomicFeatures(tmps,
                                     save_path = save_path)
 
