@@ -23,7 +23,6 @@ class Ablation():
 
 	def ablate_filter(self, step):
 
-		_layer, _filter, _class_list, _value = [], [], [], []
 		layer_idx = 0
 		for idx, layer in enumerate(self.model.layers):
 			if layer.name == self.layer:
@@ -35,30 +34,37 @@ class Ablation():
 
 		#predicts each volume and save the results in np array
 		prediction_unshaped = self.model.predict(self.test_image, batch_size=1, verbose=0)
+
+		dice_json = {}
+		dice_json['feature'] = []
+		for class_ in self.classinfo.keys():
+			dice_json[class_] = []
+
 		for j in tqdm(filters_to_ablate):
 			#print('Perturbed_Filter = %d' %j)
 			self.model.load_weights(self.weights, by_name = True)
 			layer_weights = np.array(self.model.layers[layer_idx].get_weights())
+
 			occluded_weights = layer_weights.copy()
 			occluded_weights[0][:,:,:,j] = 0
 			occluded_weights[1][j] = 0
+
 			self.model.layers[layer_idx].set_weights(occluded_weights)			
-			prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1,verbose=0) 
+			prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1, verbose=0) 
 
 
 			for _class in self.classinfo.keys():
-				_layer.append(layer_idx)
-				_filter.append(j)
-				_class_list.append(_class)
-				_value.append(self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
-			        			np_utils.to_categorical(prediction_unshaped.argmax(axis = -1), num_classes=self.nclasses), self.classinfo[_class]) - \
-					     self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
-			        			np_utils.to_categorical(prediction_unshaped_occluded.argmax(axis = -1), num_classes=self.nclasses), self.classinfo[_class]))
+				dice_json['feature'].append(j)
+				dice_json[_class].append(self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
+			        				np_utils.to_categorical(prediction_unshaped.argmax(axis = -1), 
+											num_classes=self.nclasses), self.classinfo[_class]) - \
+					     		self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
+			        					np_utils.to_categorical(prediction_unshaped_occluded.argmax(axis = -1), 
+											num_classes=self.nclasses), self.classinfo[_class]))
 
 
-		json = {'layer': _layer, 'filter': _filter, 'class_list': _class_list, 'value': _value}
-		#K.clear_session()		
-		return(json)
+		df = pd.DataFrame(dice_json)
+		return df
 
 
 # if __name__ == '__main__':

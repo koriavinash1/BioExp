@@ -64,15 +64,15 @@ for layer_name in layers_to_consider:
                                                     percentile = 85)
 
 
-    image, gt = utils.load_vol_brats('../../sample_vol/brats/Brats18_CBICA_APR_1', slicen=103)
-    image = image[:, :, 3][..., None]
-    maks_path = '../../sample_vol/brats/Brats18_CBICA_APR_1/mask.nii.gz'
-    ROI = sitk.GetArrayFromImage(sitk.ReadImage(maks_path))[103, :, :]
-
     print (layer_name)
     infoclasses = {}
     for i in range(1): infoclasses['class_'+str(i)] = (i,)
     infoclasses['whole'] = (1,2,3)
+
+    image, gt = utils.load_vol_brats('../../sample_vol/brats/Brats18_CBICA_APR_1', slicen=103)
+    image = image[:, :, 3][..., None]
+    maks_path = '../../sample_vol/brats/Brats18_CBICA_APR_1/mask.nii.gz'
+    ROI = sitk.GetArrayFromImage(sitk.ReadImage(maks_path))[103, :, :]
 
     _, df = dissector.quantify_gt_features(image, gt, 
                             threshold_maps, 
@@ -168,17 +168,13 @@ pickle.dump(json, file_)
 #########################################################################
 
 # radiomic analysis
-for class_ in np.unique(classes):
-    tmps = []
-    for ii, (tmap, _class_) in enumerate(zip(texture_maps, classes)):
-        if class_ == _class_ : tmps.append(tmap[:, :, 0])
-    
+for ii, (tmap, _class_) in enumerate(zip(texture_maps, classes)):
     # create sitk object
-    # ipdb.set_trace()
+    # ipdb.set_trace()		
     save_path = os.path.join(results_root_path, 'RadiomicAnalysis/unet_{}/amaps/class_{}/'.format(seq, class_))
     os.makedirs(save_path, exist_ok=True)
     
-    tmps = np.array(tmps)
+    tmps = np.array(tmap[None, ...])
     print (tmps.shape)
     tmps = tmps.transpose(1,2,0)
     feat_extractor = radfeatures.ExtractRadiomicFeatures(tmps,
