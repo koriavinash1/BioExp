@@ -249,7 +249,8 @@ class Dissector():
             dice_json['feature'].append(i)
 
             for class_ in nclasses.keys():
-                for _class_ in nclasses[class_]:
+                mask = gt == nclasses[class_][0]
+                for _class_ in nclasses[class_][1:]:
                     mask += gt == _class_
                 class_dice = (np.sum(mask*(eroded_img>0)) + 1e-5)*2.0/(np.sum(mask*1.) + np.sum((eroded_img>0)*1.) + 1e-5) 
                 dice_json[class_].append(class_dice)

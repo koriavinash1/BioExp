@@ -15,6 +15,10 @@ import matplotlib.pyplot as plt
 
 import pdb
 import argparse
+from keras.backend.tensorflow_backend import set_session
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.4
+set_session(tf.Session(config=config))
 
 parser = argparse.ArgumentParser(description='feature study')
 parser.add_argument('--seq', default='flair', type=str, help='mri sequence')
@@ -27,7 +31,7 @@ model_path        = '../../../saved_models/model_{}_scaled/model-archi.h5'.forma
 weights_path      = '../../../saved_models/model_{}_scaled/model-wts-{}.hdf5'.format(seq, seq)
 
 data_root_path    = '../../../slices_scaled/val/patches'
-results_root_path = '../../../results_scaled/'
+results_root_path = 'results_scaled/'
 
 layers_to_consider = ['conv2d_2', 'conv2d_3', 'conv2d_4', 'conv2d_5', 'conv2d_6', 'conv2d_7', 'conv2d_8', 'conv2d_9', 'conv2d_10', 'conv2d_11', 'conv2d_12', 'conv2d_13', 'conv2d_14', 'conv2d_15', 'conv2d_16', 'conv2d_17', 'conv2d_18', 'conv2d_19', 'conv2d_20', 'conv2d_21']
 input_name = 'input_1'

@@ -15,7 +15,8 @@ all_patients = glob(root_path+'*/*_' + seq + '.nii.gz')
 all_masks    = glob(root_path+'*/*_seg.nii.gz')
 assert len(all_patients) == len(all_masks) 
 
-nclasses = 1infoclasses = {}
+nclasses = 1
+infoclasses = {}
 for i in range(1): infoclasses['class_'+str(i)] = (i,)
 infoclasses['whole'] = (1,2,3)
 

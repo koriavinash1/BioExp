@@ -17,15 +17,18 @@ class Ablation():
 		self.test_image = test_image
 		self.layer = layer
 		self.gt = gt
-		self.mode = mode
 		self.classinfo = classes
 		self.nclasses = nclasses
 
 
 	def ablate_filter(self, step):
 
-		layer, _filter, class_list, value = [], [], [], []
-		filters_to_ablate = np.arange(0, self.model.layers[self.layer].get_weights()[0].shape[-1], step)
+		_layer, _filter, _class_list, _value = [], [], [], []
+		layer_idx = 0
+		for idx, layer in enumerate(self.model.layers):
+			if layer.name == self.layer:
+				filters_to_ablate = np.arange(0, layer.get_weights()[0].shape[-1], step)
+				layer_idx = idx
 		            
 		#print('Layer = %s' %self.model.layers[self.layer].name)
 		self.model.load_weights(self.weights, by_name = True)
@@ -35,29 +38,27 @@ class Ablation():
 		for j in tqdm(filters_to_ablate):
 			#print('Perturbed_Filter = %d' %j)
 			self.model.load_weights(self.weights, by_name = True)
-			layer_weights = np.array(self.model.layers[self.layer].get_weights())
+			layer_weights = np.array(self.model.layers[layer_idx].get_weights())
 			occluded_weights = layer_weights.copy()
 			occluded_weights[0][:,:,:,j] = 0
 			occluded_weights[1][j] = 0
-			self.model.layers[self.layer].set_weights(occluded_weights)			
+			self.model.layers[layer_idx].set_weights(occluded_weights)			
 			prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1,verbose=0) 
 
 
 			for _class in self.classinfo.keys():
-				layer.append(self.layer)
+				_layer.append(layer_idx)
 				_filter.append(j)
-				class_list.append(_class)
-				value.append(self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
+				_class_list.append(_class)
+				_value.append(self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
 			        			np_utils.to_categorical(prediction_unshaped.argmax(axis = -1), num_classes=self.nclasses), self.classinfo[_class]) - \
 					     self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
 			        			np_utils.to_categorical(prediction_unshaped_occluded.argmax(axis = -1), num_classes=self.nclasses), self.classinfo[_class]))
 
 
-			json = {'layer': layer, 'filter': _filter, 'class_list': class_list, 'value': value}
-
-			#K.clear_session()		
-
-			return(json)
+		json = {'layer': _layer, 'filter': _filter, 'class_list': _class_list, 'value': _value}
+		#K.clear_session()		
+		return(json)
 
 
 # if __name__ == '__main__':
