@@ -87,6 +87,7 @@ for layer_name in layers_to_consider:
     # list all featuremap dice greater than 0.1
     n_top = 5
     dice_matrix = df.values[:, 1:]
+    dice_matrix = (dice_matrix - np.min(dice_matrix, axis=0))/(np.max(dice_matrix, axis=0) - np.min(dice_matrix, axis=0))
     dice_matrix = dice_matrix > 0.5
     feature_info, class_info = np.where(dice_matrix)
     index = np.arange(len(feature_info))
@@ -147,7 +148,7 @@ for layer_, feature_, class_ in zip(layers, feature_maps, classes):
     # if counter == 2: break
     # K.clear_session()
 
-    print (layer_, feature_)
+    print (layer_, feature_, class_)
     # Initialize a Visualizer Instance
     texture_maps.append(E.run(layer = layer_, # + '_' + str(feature_), 
 				channel = feature_, 
@@ -173,7 +174,7 @@ pickle.dump(json, file_)
 for ii, (tmap, _class_) in enumerate(zip(texture_maps, classes)):
     # create sitk object
     # ipdb.set_trace()		
-    save_path = os.path.join(results_root_path, 'RadiomicAnalysis/unet_{}/amaps/class_{}/'.format(seq, class_))
+    save_path = os.path.join(results_root_path, 'RadiomicAnalysis/unet_{}/amaps/class_{}/{}/'.format(seq, class_, ii))
     os.makedirs(save_path, exist_ok=True)
     
     tmps = np.array(tmap)

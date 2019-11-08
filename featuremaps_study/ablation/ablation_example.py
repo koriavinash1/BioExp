@@ -73,9 +73,10 @@ for layer_name in layers_to_consider:
 			df += A.ablate_filter(step = 1)
 			
 	df = df/(1. * num_images)
-	save_path = 'results/Ablation/unet_{}/csv/{}/'.format(seq, layer_name)
+	save_path = 'results/Ablation/unet_{}/csv/'.format(seq, layer_name)
 	os.makedirs(save_path, exist_ok=True)
-		
+	df.to_csv('results/Ablation/unet_{}/csv/{}.csv'.format(seq, layer_name))
+
 	# list all featuremap dice greater than 0.1
 	n_top = 5
 	dice_matrix = df.values[:, 1:]
@@ -155,7 +156,6 @@ json = {'textures': texture_maps,
 
 import pickle
 pickle_path = os.path.join('results/Ablation/unet_{}/lucid/'.format(seq))
-os.makedirs(pickle_path, exist_ok=True)
 file_ = open(os.path.join(pickle_path, 'all_info'), 'wb')
 pickle.dump(json, file_)
 
