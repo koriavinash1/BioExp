@@ -41,7 +41,7 @@ for seq in seq_to_consider:
 	print("Models Loaded")
 	for layer in range(0, 59):
 
-		if mode == 'whole': 
+		if mode == 'label': 
 			metric = dice_whole_coef
 			n_classes = 1
 		else:
@@ -80,11 +80,36 @@ for seq in seq_to_consider:
 			sorted_df = layer_df.sort_values(['class_list', 'value'], ascending=[True, False])
 
 			for i in range(n_classes):
-				save_path = '../results/Ablation/unet_{}/'.format(seq) + model.layers[layer].name
+				save_path = 'Ablation/unet_{}/'.format(seq) + model.layers[layer].name
 				os.makedirs(save_path, exist_ok=True)
 				if mode == 'whole':
 					class_df = sorted_df
 					class_df.to_csv(save_path +'/class_{}.csv'.format('whole'))
+
+					from BioExp.helpers.pb_file_generation import generate_pb
+
+					if not os.path.exists(model_pb_path):
+					    print (model.summary())
+					    layer_name = 'conv2d_21'# str(input("Layer Name: "))
+					    generate_pb(model_path, layer_name, model_pb_path, weights_path)
+
+					input_name = 'input_1' #str(input("Input Name: "))
+					class Load_Model(Model):
+					    model_path = model_pb_path
+					    image_shape = [None, 1, 240, 240]
+					    image_value_range = (0, 1)
+					    input_name = input_name
+
+
+					graph_def = tf.GraphDef()
+					with open(model_pb_path, "rb") as f:
+					    graph_def.ParseFromString(f.read())
+
+					# for node in graph_def.node:
+					#     print(node.name)
+
+
+					print ("==========================")
 					texture_maps = []
 
 					# pdb.set_trace()
@@ -108,6 +133,7 @@ for seq in seq_to_consider:
 					    # Initialize a Visualizer Instance
 					    texture_maps.append(E.run(layer = layer_, # + '_' + str(feature_), 
 									channel = feature_, 
+									class_ = 'whole',
 									transforms = True)) 
 					    counter += 1
 

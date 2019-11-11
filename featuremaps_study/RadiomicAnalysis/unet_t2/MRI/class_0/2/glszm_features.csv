@@ -1,0 +1,2 @@
+GrayLevelNonUniformity,GrayLevelNonUniformityNormalized,GrayLevelVariance,HighGrayLevelZoneEmphasis,LargeAreaEmphasis,LargeAreaHighGrayLevelEmphasis,LargeAreaLowGrayLevelEmphasis,LowGrayLevelZoneEmphasis,SizeZoneNonUniformity,SizeZoneNonUniformityNormalized,SmallAreaEmphasis,SmallAreaHighGrayLevelEmphasis,SmallAreaLowGrayLevelEmphasis,ZoneEntropy,ZonePercentage,ZoneVariance
+2.0,1.0,0.0,1.0,7848290898.5,7848290898.5,7848290898.5,1.0,1.0,0.5,0.5000000000318541,0.5000000000318541,0.5000000000318541,0.9999999999999993,1.5963348152641535e-05,3924082806.25

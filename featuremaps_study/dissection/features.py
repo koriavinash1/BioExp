@@ -21,7 +21,7 @@ parser.add_argument('--seq', default='flair', type=str, help='mri sequence')
 parser = parser.parse_args()
 
 seq = parser.seq
-
+print (seq)
 model_pb_path     = '../../../saved_models/model_{}_scaled/model.pb'.format(seq)
 model_path        = '../../../saved_models/model_{}_scaled/model-archi.h5'.format(seq)
 weights_path      = '../../../saved_models/model_{}_scaled/model-wts-{}.hdf5'.format(seq, seq)
@@ -29,7 +29,7 @@ weights_path      = '../../../saved_models/model_{}_scaled/model-wts-{}.hdf5'.fo
 data_root_path    = '/media/brats/mirlproject2/parth/slices_scaled/val/patches'
 results_root_path = '/media/brats/mirlproject2/parth/results_scaled/'
 
-layers_to_consider = ['conv2d_3', 'conv2d_4', 'conv2d_5', 'conv2d_6', 'conv2d_7', 'conv2d_8', 'conv2d_9', 'conv2d_10', 'conv2d_11', 'conv2d_12', 'conv2d_13', 'conv2d_14', 'conv2d_15', 'conv2d_16', 'conv2d_17', 'conv2d_18', 'conv2d_19', 'conv2d_20', 'conv2d_21']
+layers_to_consider = ['conv2d_2', 'conv2d_3', 'conv2d_4', 'conv2d_5', 'conv2d_6', 'conv2d_7', 'conv2d_8', 'conv2d_9', 'conv2d_10', 'conv2d_11', 'conv2d_12', 'conv2d_13', 'conv2d_14', 'conv2d_15', 'conv2d_16', 'conv2d_17', 'conv2d_18', 'conv2d_19', 'conv2d_20', 'conv2d_21']
 input_name = 'input_1'
 
 
@@ -55,7 +55,8 @@ for layer_name in layers_to_consider:
                             seq=seq)
 
     threshold_maps = dissector.get_threshold_maps(dataset_path = data_root_path,
-                                                    save_path  = os.path.join(results_root_path, 'Dissection/unet_{}/threshold_maps/'.format(seq)),
+                                                    save_path  = os.path.join(results_root_path,
+								 'Dissection/unet_{}/threshold_maps/'.format(seq)),
                                                     percentile = 85)
 
 
@@ -67,14 +68,14 @@ for layer_name in layers_to_consider:
     print (layer_name)
     _, df = dissector.quantify_gt_features(image, gt, 
                             threshold_maps, 
-                            nclasses=2, 
+                            nclasses=4, 
                             nfeatures=None, 
-                            save_path  = os.path.join(results_root_path, 'Dissection/unet_{}/csv_whole/'.format(seq)),
-                            save_fmaps = os.path.join(results_root_path, 'Dissection/unet_{}/feature_maps_whole/'.format(seq)), 
+                            save_path  = os.path.join(results_root_path, 'Dissection/unet_{}/csv/'.format(seq)),
+                            save_fmaps = os.path.join(results_root_path, 'Dissection/unet_{}/feature_maps/'.format(seq)), 
                             ROI = ROI)
 
     # list all featuremap dice greater than 0.1
-    n_top = 5
+    n_top = -1
     dice_matrix = df.values[:, 1:]
     dice_matrix = dice_matrix > 0.3
     feature_info, class_info = np.where(dice_matrix)
@@ -87,7 +88,6 @@ for layer_name in layers_to_consider:
     classes.extend(class_info)
 
 
-exit()
 #########################################################################
 
 # import ipdb
@@ -141,6 +141,7 @@ for layer_, feature_, class_ in zip(layers, feature_maps, classes):
     # Initialize a Visualizer Instance
     texture_maps.append(E.run(layer = layer_, # + '_' + str(feature_), 
 				channel = feature_, 
+                                class_  = "class_"+str(class_),
                                 transforms = True)) 
     counter += 1
 

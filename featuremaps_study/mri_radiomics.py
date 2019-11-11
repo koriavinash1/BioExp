@@ -9,27 +9,30 @@ sys.path.append('..')
 from BioExp.helpers import utils, radfeatures
 
 
-seq = 't1ce'
+seq = 't2'
 root_path = '../sample_vol/'
 all_patients = glob(root_path+'*/*_' + seq + '.nii.gz')
 all_masks    = glob(root_path+'*/*_seg.nii.gz')
 assert len(all_patients) == len(all_masks) 
 
-nclasses = 4
+nclasses = 1
 
 # We need to preprocess the MRI images same as the model before getting radiomic features
+#remove_col = [Energy	TotalEnergy	Autocorrelation	ClusterProminence	ClusterShade	ClusterTendency	Contrast	Correlation	DifferenceAverage	DifferenceVariance	Id	Idm	Idmn	Idn	Imc1	Imc2	InverseVariance	JointAverage	JointEnergy LargeAreaEmphasis	LargeAreaHighGrayLevelEmphasis	LargeAreaLowGrayLevelEmphasis	LowGrayLevelZoneEmphasis	SizeZoneNonUniformity	SizeZoneNonUniformityNormalized	SmallAreaEmphasis	SmallAreaHighGrayLevelEmphasis	SmallAreaLowGrayLevelEmphasis	ZoneEntropy	ZonePercentage	ZoneVariance	HighGrayLevelRunEmphasis	LongRunEmphasis	LongRunHighGrayLevelEmphasis	LongRunLowGrayLevelEmphasis	LowGrayLevelRunEmphasis	RunEntropy	RunLengthNonUniformity	RunLengthNonUniformityNormalized	RunPercentage	RunVariance	ShortRunEmphasis	ShortRunHighGrayLevelEmphasis	ShortRunLowGrayLevelEmphasis	Busyness	Coarseness	Complexity	Strength	DependenceEntropy	DependenceNonUniformity	DependenceNonUniformityNormalized	DependenceVariance	HighGrayLevelEmphasis	LargeDependenceEmphasis	LargeDependenceHighGrayLevelEmphasis	LargeDependenceLowGrayLevelEmphasis	LowGrayLevelEmphasis	SmallDependenceEmphasis	SmallDependenceHighGrayLevelEmphasis	SmallDependenceLowGrayLevelEmphasis]
+
 
 for ii in range(nclasses):
-	save_path = '/media/brats/mirlproject2/parth/results_scaled/RadiomicAnalysis/unet_{}/MRI/class_{}/'.format(seq, ii)
+	save_path = './RadiomicAnalysis/unet_{}/MRI/class_{}/'.format(seq, ii)
 	os.makedirs(save_path, exist_ok=True)
 
 	for i, (vol_, mask_) in enumerate(zip(all_patients, all_masks)):
 
 		vol  = nib.load(vol_).get_data()
-		vol = (vol - np.mean(vol))/(np.std(vol))# - np.min(vol))
+		vol = (vol - np.mean(vol))/(np.std(vol))
+		vol = (vol - np.min(vol))/(np.max(vol) - np.min(vol))
 		mask = nib.load(mask_).get_data()
 		
-		mask = np.uint8(mask == ii)
+		mask = np.uint8(mask > ii)
 		pth = os.path.join(save_path, str(i))	
 		os.makedirs(pth, exist_ok=True)
 		feat_extractor = radfeatures.ExtractRadiomicFeatures(vol, mask, save_path = pth)
