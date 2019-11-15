@@ -1,5 +1,5 @@
 # BioExp
-Explainaning Deep Learning Models which perform various image processing tasks in the medical domain.
+Explaining Deep Learning Models which perform various image processing tasks in the medical domain.
 
 # Citations
 If you use BioExp, please cite our work:
@@ -19,11 +19,14 @@ If you use BioExp, please cite our work:
 
 
 # Features
+
+BioExp supports the following interpretability methods:
+
 - Model Dissection Analysis
 - Model Ablation Analysis
 - Model Uncertainty Analysis
-  - epistemic
-  - aleatoric
+  - Epistemic Uncertainty
+  - Aleatoric Uncertainty
 - GradCAM
 - Activation Maximization
 
@@ -80,5 +83,5 @@ from BioExp.concept.feature import Feature_Visualizer
 ```
 
 # Contact
-- Avinash Kori (koriavinash1@gmail1.com)
+- Avinash Kori (koriavinash1@gmail.com)
 - Parth Natekar (parth@smail.iitm.ac.in)
