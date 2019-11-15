@@ -58,7 +58,7 @@ pip install BioExp
 ```
 from BioExp.spatial import Ablation
 
-A = spatial.Ablation(model = moedl, 
+A = spatial.Ablation(model = model, 
 				weights_pth = weights_path, 
 				metric      = dice_label_coef, 
 				layer_name  = layer_name, 
