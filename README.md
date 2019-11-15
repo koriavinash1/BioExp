@@ -66,7 +66,7 @@ A = spatial.Ablation(model = moedl,
 
 df = A.ablate_filter(step = 1)
 ```
-
+<hline>
 # Dissection
 
 ## Usage
@@ -101,7 +101,7 @@ dissector.quantify_gt_features(image, gt,
 
 ![dissection](./imgs/dissection.png)
 
-
+<hline>
 # GradCAM
 
 ## Usage
@@ -119,7 +119,7 @@ dice = flow.cam(model, img, gt,
 ## Results
 ![gradcam](./imgs/gradcam.png)
 
-
+<hline>
 # Activation Maximization
 
 ## Usage
@@ -142,6 +142,7 @@ a = E.run(layer = 'conv2d_17', class_ = 'None', channel = 95, transforms=True)
 ![lucid](./imgs/lucid.png)
 
 
+<hline>
 # Uncertainty
 ```
 from BioExp.uncertainty import uncertainty
@@ -162,6 +163,7 @@ mean, var = D.combined(model, iterations = 50)
 ![un](./imgs/uncertainty.png)
 
 
+<hline>
 # Radiomics
 ## Usage
 ```
@@ -169,6 +171,9 @@ from BioExp.helpers import radfeatures
 feat_extractor = radfeatures.ExtractRadiomicFeatures(image, mask, save_path = pth)
 df = feat_extractor.all_features()
 ```
+
+<hline>
+
 
 # Contact
 - Avinash Kori (koriavinash1@gmail1.com)
