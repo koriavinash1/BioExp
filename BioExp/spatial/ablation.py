@@ -12,15 +12,7 @@ class Ablation():
 	"""
 
 	A class for conducting an ablation study on a trained keras model instance
-
-	Inputs: model     : A keras model
-	        weights   : The weights of the model
-	        metric    : The evaluation metric to determine the effect of the ablation
-	        layer     : The layers for which weights are to be ablated
-	        test_image: The input image on which ablation is conducted
-	        gt        : The ground truth
-
-	Outputs: Visualized Feature saved at savepath
+	
 	"""
 
 	def __init__(self, model, weights, metric, layer, test_image, gt, classes, nclasses=4):
