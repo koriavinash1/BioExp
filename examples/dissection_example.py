@@ -4,7 +4,7 @@ from BioExp import spatial
 from BioExp.helpers import utils
 import SimpleITK as sitk
 from keras.models import load_model
-from losses import *
+from BioExp.helpers.losses import *
 
 
 data_root_path = '../sample_vol/'
@@ -19,9 +19,15 @@ model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
                                         'dice_en_metric':dice_en_metric})
 model.load_weights(weights_path)
 
+seq = 'flair'
 layer_name = 'conv2d_3'
 dissector = spatial.Dissector(model=model,
-                        layer_name = layer_name)
+                            layer_name = layer_name,
+                            seq=seq)
+
+infoclasses = {}
+for i in range(1): infoclasses['class_'+str(i)] = (i,)
+infoclasses['whole'] = (1,2,3)
 
 threshold_maps = dissector.get_threshold_maps(dataset_path = data_root_path,
                                                 save_path  = '../results/Dissection/densenet/threshold_maps/',
@@ -39,7 +45,7 @@ dissector.apply_threshold(image, threshold_maps,
 
 dissector.quantify_gt_features(image, gt, 
                         threshold_maps, 
-                        nclasses=4, 
+                        nclasses=infoclasses, 
                         nfeatures=9, 
                         save_path='../results/Dissection/densenet/csv/',
                         save_fmaps=False, 
