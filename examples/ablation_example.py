@@ -1,13 +1,10 @@
 import keras
 import numpy as np
-import tensorflow as tf
-from keras.models import load_model
-import pandas as pd
-from glob import glob
 import sys
-import os
 sys.path.append('..')
+from BioExp import spatial
 from BioExp.helpers import utils
+<<<<<<< HEAD
 from BioExp.spatial import Ablation
 #from BioExp.helpers.losses import *
 from BioExp.helpers.losses import *
@@ -22,72 +19,39 @@ config.gpu_options.per_process_gpu_memory_fraction = 0.3
 set_session(tf.Session(config=config))
 
 seq = 'flair'
+import SimpleITK as sitk
+from keras.models import load_model
+from BioExp.helpers.losses import *
+from BioExp.helpers.metric import *
 
 
 data_root_path = '../sample_vol/'
 
-seq_to_consider = ['flair', 't1c', 't2', 't1']
+model_path = '../trained_models/U_resnet/ResUnet.h5'
+weights_path = '../trained_models/U_resnet/ResUnet.40_0.559.hdf5'
 
 
-for seq in seq_to_consider:
+model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
+                                        'dice_whole_metric':dice_whole_metric,
+                                        'dice_core_metric':dice_core_metric,
+                                        'dice_en_metric':dice_en_metric})
+model.load_weights(weights_path)
 
-	model_pb_path = '../../saved_models/model_{}/model.pb'.format(seq)	
-	model_path = '../../saved_models/model_{}/model-archi.h5'.format(seq)
-	weights_path = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
-	mode = 'label'
-	model = load_model(model_path, 
-			custom_objects={'gen_dice_loss': gen_dice_loss,'dice_whole_metric':dice_whole_metric,
-			'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
-
-	for layer in range(0, 59):
-
-		if mode == 'whole': 
-			metric = dice_whole_coef
-			n_classes = 1
-		else:
-			metric = dice_label_coef
-			n_classes=4
-
-		if 'conv2d' in model.layers[layer].name:	
-			print(model.layers[layer].name)
-			for file in tqdm(glob(data_root_path +'*')[:10]):
-
-				test_image, gt = utils.load_vol_brats(file, slicen=78)
-
-				test_image = test_image[:, :, 0].reshape((1, 240, 240, 1))	
-
-				A = Ablation(model, weights_path, metric, layer, test_image, gt, mode=mode)
-
-				ablation_dict = A.ablate_filter(1)
-
-				try:
-					values = pd.concat([values, pd.DataFrame(ablation_dict['value'])], axis=1)	
-				except:
-					values = pd.DataFrame(ablation_dict['value'], columns = ['value'])
+infoclasses = {}
+for i in range(1): infoclasses['class_'+str(i)] = (i,)
+infoclasses['whole'] = (1,2,3)
 
 
-			mean_value = values.mean(axis=1)
+data_root_path = '../sample_vol/'
+layer_name = 'conv2d_3'
+test_image, gt = utils.load_vol_brats('../sample_vol/Brats18_CBICA_ARZ_1', slicen=78)
+A = spatial.Ablation(model = moedl, 
+				weights_pth = weights_path, 
+				metric      = dice_label_coef, 
+				layer_name  = layer_name, 
+				test_image  = test_image, 
+				gt 	    = gt, 
+				classes     = infoclasses, 
+				nclasses    = 4)
 
-			for key in ablation_dict.keys():
-				if key != 'value':
-					try:
-						layer_df = pd.concat([layer_df, pd.DataFrame(ablation_dict[key], columns = [key])], axis=1)	
-					except:
-						layer_df = pd.DataFrame(ablation_dict[key], columns = [key])
-
-			layer_df = pd.concat([layer_df, mean_value.rename('value')], axis=1)	
-
-			sorted_df = layer_df.sort_values(['class_list', 'value'], ascending=[True, False])
-
-			for i in range(n_classes):
-				save_path = '../results/Ablation/unet_{}/'.format(seq) + model.layers[layer].name
-				os.makedirs(save_path, exist_ok=True)
-				if mode == 'whole':
-					class_df = sorted_df
-					class_df.to_csv(save_path +'/class_{}.csv'.format('whole'))
-				else:
-					for i in range(4):
-						class_df = sorted_df.loc[sorted_df['class_list'] == i]
-						class_df.to_csv(save_path +'/class_{}.csv'.format(i))
-
-			del values, layer_df, mean_value
+df = A.ablate_filter(step = 1)
