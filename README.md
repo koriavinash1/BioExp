@@ -25,8 +25,8 @@ BioExp supports the following interpretability methods:
 - Model Dissection Analysis
 - Model Ablation Analysis
 - Model Uncertainty Analysis
-  - Epistemic Uncertainty
-  - Aleatoric Uncertainty
+  - Epistemic Uncertainty using Bayesian Dropout
+  - Aleatoric Uncertainty using Test Time Augmentation
 - GradCAM
 - Activation Maximization
 
