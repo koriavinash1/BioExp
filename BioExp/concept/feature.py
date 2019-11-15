@@ -35,7 +35,7 @@ class Feature_Visualizer():
   Outputs: Visualized Feature saved at savepath
   """
 
-  def __init__(self, model_loader, savepath = './', n_channels = 1, regularizer_params=dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])):
+  def __init__(self, model_loader, savepath = './', n_channels = 1, regularizer_params = dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])):
 
     default_dict = dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])
     for key in regularizer_params.keys():
@@ -141,33 +141,36 @@ class Feature_Visualizer():
               output = tf.concat([output, a], -1)
       return output
 
-  def run(self, layer, class_, channel=None, style_template=None, transforms = False):
+  def run(self, layer, class_, channel=None, style_template=None, transforms = False, opt_steps = 1000):
+    """
+    layer         : layer_name to visualize
+    class_        : class to consider
+    style_template: template for comparision of generated activation maximization map
+    transforms    : transforms required
+    opt_steps     : number of optimization steps
     """
 
-    """
     self.layer = layer
     self.channel = channel if channel is not None else 0
     
 
-    # layer_to_consider = ['conv2d_3', 'conv2d_5', 'conv2d_7', 'conv2d_13', 'conv2d_15', 'conv2d_17',  'conv2d_21', 'conv2d_23', 'conv2d_25']
-    print ("Hello .................")
     with tf.Graph().as_default() as graph, tf.Session() as sess:
 
       if style_template is not None:
         gram_template = tf.constant(np.load(style_template), #[1:-1,:,:],
                                     dtype=tf.float32) 
 
-      obj = self._channel(self.layer+"/convolution", self.channel, gram=style_template)
+      obj  = self._channel(self.layer+"/convolution", self.channel, gram=style_template)
       obj += -self.L1 * objectives.L1(constant=.5)
-      #obj += self.TV * objectives.total_variation()
-      #obj += self.blur * objectives.blur_input_each_step()
+      obj += self.TV * objectives.total_variation()
+      obj += self.blur * objectives.blur_input_each_step()
 
       if transforms == True:
         transforms = [
           transform.pad(2 * self.jitter),
           transform.jitter(self.jitter),
-          # transform.random_scale([self.scale ** (n/10.) for n in range(-10, 11)]),
-          # transform.random_rotate(range(-self.rotate, self.rotate + 1))
+          transform.random_scale([self.scale ** (n/10.) for n in range(-10, 11)]),
+          transform.random_rotate(range(-self.rotate, self.rotate + 1))
         ]
       else:
         transforms = []
@@ -179,8 +182,7 @@ class Feature_Visualizer():
                             transforms=transforms, relu_gradient_override=False)
       tf.initialize_all_variables().run()
 
-      # pprint([v.name for v in tf.get_default_graph().as_graph_def().node])
-      for i in range(1000):
+      for i in range(opt_steps):
         T("vis_op").run()
 
       plt.figure(figsize=(10,10))
