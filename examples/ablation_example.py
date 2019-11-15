@@ -4,7 +4,7 @@ import sys
 sys.path.append('..')
 from BioExp import spatial
 from BioExp.helpers import utils
-<<<<<<< HEAD
+import SimpleITK as sitk
 from BioExp.spatial import Ablation
 #from BioExp.helpers.losses import *
 from BioExp.helpers.losses import *
@@ -14,16 +14,12 @@ from lucid.modelzoo.vision_base import Model
 from BioExp.concept.feature import Feature_Visualizer
 from tqdm import tqdm
 from keras.backend.tensorflow_backend import set_session
+from keras.models import load_model
 config = tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.3
 set_session(tf.Session(config=config))
 
 seq = 'flair'
-import SimpleITK as sitk
-from keras.models import load_model
-from BioExp.helpers.losses import *
-from BioExp.helpers.metric import *
-
 
 data_root_path = '../sample_vol/'
 
