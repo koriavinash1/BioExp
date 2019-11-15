@@ -10,28 +10,47 @@ from keras.models import load_model
 
 class Ablation():
 	"""
+
 	A class for conducting an ablation study on a trained keras model instance
 
-	Inputs: model: A keras model
-	        weights: The weights of the model
-	        metric: The evaluation metric to determine the effect of the ablation
-	        layer: The layers for which weights are to be ablated
+	Inputs: model     : A keras model
+	        weights   : The weights of the model
+	        metric    : The evaluation metric to determine the effect of the ablation
+	        layer     : The layers for which weights are to be ablated
 	        test_image: The input image on which ablation is conducted
-	        gt: The ground truth
+	        gt        : The ground truth
 
 	Outputs: Visualized Feature saved at savepath
 	"""
 
 	def __init__(self, model, weights, metric, layer, test_image, gt, classes, nclasses=4):
 		
+
+
+	def __init__(self, model, weights_pth, metric, layer_name, test_image, gt, classes, nclasses=4):
+		
+		"""
+		model       : keras model architecture (keras.models.Model)
+		weights_pth : saved weights path (str)
+                metric      : metric to compare prediction with gt, for example dice, CE
+                layer_name  : name of the layer which needs to be ablated
+                test_img    : test image used for ablation
+                gt          : ground truth for comparision
+                classes     : class informatiton which needs to be considered, class label as 
+				key and corresponding required values 
+				in a tuple: {'class1': (1,), 'whole': (1,2,3)}
+                nclasses    : number of unique classes in gt
+		"""		
+
 		self.model = model
-		self.weights = weights
+		self.weights = weights_pth
 		self.metric = metric
 		self.test_image = test_image
-		self.layer = layer
+		self.layer = layer_name
 		self.gt = gt
 		self.classinfo = classes
 		self.nclasses = nclasses
+
 
 
 	def ablate_filter(self, step=1):

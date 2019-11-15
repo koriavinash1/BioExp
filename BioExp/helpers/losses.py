@@ -1,7 +1,8 @@
 import numpy as np
 import keras.backend as K
 import tensorflow as tf
-from tensorflow.keras.losses import categorical_crossentropy
+import keras
+from sklearn.preprocessing import OneHotEncoder
 
 def dice(y_true, y_pred):
     #computes the dice score on two tensors
@@ -31,7 +32,7 @@ def dice_updated(y_true, y_pred):
 def dice_whole_metric(y_true, y_pred):
     #computes the dice for the whole tumor
 
-    y_pred = tf.round(y_pred)
+    #y_pred = tf.round(y_pred)
     y_true_f = K.reshape(y_true,shape=(-1,4))
     y_pred_f = K.reshape(y_pred,shape=(-1,4))
     y_whole=K.sum(y_true_f[:,1:],axis=1)
@@ -43,7 +44,7 @@ def dice_whole_metric(y_true, y_pred):
 def dice_en_metric(y_true, y_pred):
     #computes the dice for the enhancing region
 
-    y_pred = tf.round(y_pred)
+    #y_pred = tf.round(y_pred)
     y_true_f = K.reshape(y_true,shape=(-1,4))
     y_pred_f = K.reshape(y_pred,shape=(-1,4))
     y_enh=y_true_f[:,-1]
@@ -67,14 +68,6 @@ def dice_core_metric(y_true, y_pred):
     return dice_core
 
 
-
-def softmax_dice_loss(y_true, y_pred):
-    return (categorical_crossentropy(y_true, y_pred) * 0.5 \
-         + dice_coef_loss(y_true[..., 0], y_pred[..., 0]) * 0.25 \
-         + dice_coef_loss(y_true[..., 1], y_pred[..., 1]) * 0.25)
-
-def dice_coef_loss(y_true, y_pred):
-    return 1 - (dice_coef(y_true, y_pred))
 
 def weighted_log_loss(y_true, y_pred):
     # scale predictions so that the class probas of each sample sum to 1
@@ -130,17 +123,59 @@ def soft_dice_loss(y_true, y_pred):
 
         Adapted from https://github.com/Lasagne/Recipes/issues/99#issuecomment-347775022
     '''
-    y_true, y_pred = np.around(y_true), np.around(y_pred)
+    #y_pred = keras.utils.np_utils.to_categorical(np.argmax(y_true, axis = -1), num_classes=y_pred.shape[-1])
     epsilon = 1e-6
-    # skip the batch and class axis for calculating Dice score
-    axes = tuple(range(1, len(y_pred.shape) - 1))
 
-    numerator = 2. * np.sum(y_pred * y_true, axes)
-    denominator = np.sum(y_pred + y_true, axes)
+    # skip the batch not class axis for calculating Dice score
+    axes = tuple(range(1, len(y_pred.shape)))
+    #print(axes)
+    numerator = 2. * np.sum(y_pred * y_true, axis=0)
+    denominator = np.sum(y_pred + y_true, axis=0)
+
     #print(numerator, denominator)
     return np.mean(numerator / (denominator + epsilon))  # average over classes and batch
 
-smooth = 0.02
+smooth = 1e-3
+
+def dice_whole_coef(y_true, y_pred):
+
+    y_true = np.reshape(y_true, (-1, 4))
+    y_pred = np.reshape(y_pred, (-1, 4))
+
+    y_whole = np.sum(y_true[:, 1:], axis = 1)
+    p_whole = np.sum(y_pred[:, 1:], axis= 1)
+    #print(y_whole.shape)
+    return(dice_coef(y_whole, p_whole))
+
+def dice_core_coef(y_true, y_pred):
+
+    y_true = np.reshape(y_true, (-1, 4))
+    y_pred = np.reshape(y_pred, (-1, 4))
+
+    y_whole = np.sum(y_true[:, [1,3]], axis = 1)
+    p_whole = np.sum(y_pred[:, [1,3]], axis= 1)
+    #print(y_whole.shape)
+    return(dice_coef(y_whole, p_whole))
+
+def dice_label_coef(y_true, y_pred, labels):
+
+    y_true = np.reshape(y_true, (-1, 4))
+    y_pred = np.reshape(y_pred, (-1, 4))
+    
+    y_whole = np.sum(y_true[:, list(labels)], axis = 1)
+    p_whole = np.sum(y_pred[:, list(labels)], axis = 1)
+
+    return(dice_coef(y_whole, p_whole))
+
+def dice_en_coef(y_true, y_pred):
+
+    y_true = np.reshape(y_true, (-1, 4))
+    y_pred = np.reshape(y_pred, (-1, 4))
+
+    y_whole = y_true[:, -1]
+    p_whole = y_pred[:, -1]
+    #print(y_whole.shape)
+    return(dice_coef(y_whole, p_whole))
 
 def dice_whole_coef(y_true, y_pred):
  

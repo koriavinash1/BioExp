@@ -7,6 +7,7 @@ import os
 import tempfile
 from keras.utils import np_utils
 
+
 def normalize_scheme(slicennot):
     """
         -normalizes each slice, excluding gt
