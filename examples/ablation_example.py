@@ -8,7 +8,7 @@ import sys
 import os
 sys.path.append('..')
 from BioExp.helpers import utils
-from BioExp.spatial import ablation
+from BioExp.spatial import Ablation
 #from BioExp.helpers.losses import *
 from BioExp.spatial.losses import *
 from BioExp.helpers.metrics import *
@@ -56,7 +56,7 @@ for seq in seq_to_consider:
 
 				test_image = test_image[:, :, 0].reshape((1, 240, 240, 1))	
 
-				A = ablation.Ablation(model, weights_path, metric, layer, test_image, gt, mode=mode)
+				A = Ablation(model, weights_path, metric, layer, test_image, gt, mode=mode)
 
 				ablation_dict = A.ablate_filter(1)
 
