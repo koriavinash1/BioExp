@@ -9,21 +9,40 @@ from keras.utils import np_utils
 from keras.models import load_model
 
 class Ablation():
+	"""
+	Layer importance analysis by ablating each featuremaps 
+	in a specific layer
 
-	def __init__(self, model, weights, metric, layer, test_image, gt, classes, nclasses=4):
-		
+	"""
+
+	def __init__(self, model, weights_pth, metric, layer_name, test_image, gt, classes, nclasses=4):
+		"""
+		model       : keras model architecture (keras.models.Model)
+		weights_pth : saved weights path (str)
+                metric      : metric to compare prediction with gt, for example dice, CE
+                layer_name  : name of the layer which needs to be ablated
+                test_img    : test image used for ablation
+                gt          : ground truth for comparision
+                classes     : class informatiton which needs to be considered, class label as 
+				key and corresponding required values 
+				in a tuple: {'class1': (1,), 'whole': (1,2,3)}
+                nclasses    : number of unique classes in gt
+		"""		
 		self.model = model
-		self.weights = weights
+		self.weights = weights_pth
 		self.metric = metric
 		self.test_image = test_image
-		self.layer = layer
+		self.layer = layer_name
 		self.gt = gt
 		self.classinfo = classes
 		self.nclasses = nclasses
 
 
 	def ablate_filter(self, step):
+                """
+		step : skip factor for feature map consideration (int)
 
+ 		"""
 		layer_idx = 0
 		for idx, layer in enumerate(self.model.layers):
 			if layer.name == self.layer:
@@ -65,55 +84,3 @@ class Ablation():
 
 		df = pd.DataFrame(dice_json)
 		return df
-
-
-# if __name__ == '__main__':
-
-# 	def dice_(y_true, y_pred):
-# 	#computes the dice score on two tensors
-
-# 		sum_p=K.sum(y_pred,axis=0)
-# 		sum_r=K.sum(y_true,axis=0)
-# 		sum_pr=K.sum(y_true * y_pred,axis=0)
-# 		dice_numerator =2*sum_pr
-# 		dice_denominator =sum_r+sum_p
-# 		print(K.get_value(sum_pr), K.get_value(sum_p))
-# 		dice_score =(dice_numerator+K.epsilon() )/(dice_denominator+K.epsilon())
-# 		return dice_score
-
-# 	def metric(y_true, y_pred):
-# 	#computes the dice for the whole tumor
-
-# 		y_true_f = K.reshape(y_true,shape=(-1,4))
-# 		y_pred_f = K.reshape(y_pred,shape=(-1,4))
-# 		y_whole=K.sum(y_true_f[:,1:],axis=1)
-# 		p_whole=K.sum(y_pred_f[:,1:],axis=1)
-# 		dice_whole=dice_(y_whole,p_whole)
-# 		return dice_whole
-
-# 	def dice_label_metric(y_true, y_pred, label):
-# 	#computes the dice for the enhancing region
-
-# 		y_true_f = K.reshape(y_true,shape=(-1,4))
-# 		y_pred_f = K.reshape(y_pred,shape=(-1,4))
-# 		y_enh=y_true_f[:,label]
-# 		p_enh=y_pred_f[:,label]
-# 		dice_en=dice_(y_enh,p_enh)
-# 		return dice_en
-
-# 	data_root_path = '../sample_vol/'
-
-# 	model_path = '/media/balaji/CamelyonProject/parth/saved_models/model_flair/model-archi.h5'
-# 	weights_path = '/media/balaji/CamelyonProject/parth/saved_models/model_flair/model-wts-flair.hdf5'
-
-# 	test_image, gt = utils.load_vol_brats('../sample_vol/Brats18_CBICA_ARZ_1', slicen=78)
-
-# 	model = load_model(model_path, 
-# 		custom_objects={'gen_dice_loss': gen_dice_loss,'dice_whole_metric':dice_whole_metric,
-# 		'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
-
-# 	test_image = test_image.reshape((1, 240, 240, 4))
-
-# 	A = Ablation(model, weights_path, dice_label_metric, 16, test_image)
-
-# 	print(A.ablate_filter(10))
