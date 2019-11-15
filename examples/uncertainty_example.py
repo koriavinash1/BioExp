@@ -28,13 +28,13 @@ if __name__ == '__main__':
             D = uncertainty(test_image)
             
             # for aleatoric
-            mean, var = D.aleatoric(model, iterations = 50, dropout = 0.2)
+            mean, var = D.aleatoric(model, iterations = 50)
            
             # for epistemic
-            mean, var = D.epistemic(model, iterations = 50, dropout = 0.2)
+            mean, var = D.epistemic(model, iterations = 50)
  
             # for combined
-            mean, var = D.combined(model, iterations = 50, dropout = 0.2)
+            mean, var = D.combined(model, iterations = 50)
       
             print (np.mean(var, axis=(0,1,2)))
             list_.append(np.mean(var, axis=(0,1,2)))
