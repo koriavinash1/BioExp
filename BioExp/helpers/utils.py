@@ -6,6 +6,7 @@ import tensorflow as tf
 import os
 import tempfile
 
+
 def normalize_scheme(slicennot):
     """
         normalizes each slice, excluding gt
