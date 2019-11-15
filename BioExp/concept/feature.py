@@ -35,7 +35,7 @@ class Feature_Visualizer():
   Outputs: Visualized Feature saved at savepath
   """
 
-  def __init__(self, model_loader, savepath = './', n_channels = 1, regularizer_params=dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])):
+  def __init__(self, model_loader, savepath = './', n_channels = 4, regularizer_params=dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])):
 
     default_dict = dict.fromkeys(['jitter', 'rotate', 'scale', 'TV', 'blur', 'decorrelate', 'L1'])
     for key in regularizer_params.keys():

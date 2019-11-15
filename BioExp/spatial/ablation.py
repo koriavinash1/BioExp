@@ -9,6 +9,18 @@ from keras.utils import np_utils
 from keras.models import load_model
 
 class Ablation():
+	"""
+	A class for conducting an ablation study on a trained keras model instance
+
+	Inputs: model: A keras model
+	        weights: The weights of the model
+	        metric: The evaluation metric to determine the effect of the ablation
+	        layer: The layers for which weights are to be ablated
+	        test_image: The input image on which ablation is conducted
+	        gt: The ground truth
+
+	Outputs: Visualized Feature saved at savepath
+	"""
 
 	def __init__(self, model, weights, metric, layer, test_image, gt, classes, nclasses=4):
 		
@@ -22,7 +34,18 @@ class Ablation():
 		self.nclasses = nclasses
 
 
-	def ablate_filter(self, step):
+	def ablate_filter(self, step=1):
+		"""
+		Drops individual weights from the model, makes the prediction for the test image,
+		and calculates the difference in the evaluation metric as compared to the non-
+		ablated case. For example, for a layer with a weight matrix of shape 3x3x64, 
+		individual 3x3 matrices are zeroed out at the interval given by the step argument.
+		
+		Arguments:
+		step: The interval at which to drop weights
+
+		Outputs: A dataframe containing the importance scores for each individual weight matrix in the layer
+		"""
 
 		layer_idx = 0
 		for idx, layer in enumerate(self.model.layers):
@@ -55,65 +78,10 @@ class Ablation():
 
 			dice_json['feature'].append(j)
 			for class_ in self.classinfo.keys():
-				dice_json[class_].append(self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
-			        				np_utils.to_categorical(prediction_unshaped.argmax(axis = -1), 
-											num_classes=self.nclasses), self.classinfo[class_]) - \
-					     		self.metric(np_utils.to_categorical(self.gt, num_classes=self.nclasses), 
-			        					np_utils.to_categorical(prediction_unshaped_occluded.argmax(axis = -1), 
-											num_classes=self.nclasses), self.classinfo[class_]))
+				dice_json[class_].append(self.metric(self.gt, prediction_unshaped.argmax(axis = -1)) - \
+					     		self.metric(self.gt, prediction_unshaped_occluded.argmax(axis = -1)))
 
 
 		df = pd.DataFrame(dice_json)
 		return df
 
-
-# if __name__ == '__main__':
-
-# 	def dice_(y_true, y_pred):
-# 	#computes the dice score on two tensors
-
-# 		sum_p=K.sum(y_pred,axis=0)
-# 		sum_r=K.sum(y_true,axis=0)
-# 		sum_pr=K.sum(y_true * y_pred,axis=0)
-# 		dice_numerator =2*sum_pr
-# 		dice_denominator =sum_r+sum_p
-# 		print(K.get_value(sum_pr), K.get_value(sum_p))
-# 		dice_score =(dice_numerator+K.epsilon() )/(dice_denominator+K.epsilon())
-# 		return dice_score
-
-# 	def metric(y_true, y_pred):
-# 	#computes the dice for the whole tumor
-
-# 		y_true_f = K.reshape(y_true,shape=(-1,4))
-# 		y_pred_f = K.reshape(y_pred,shape=(-1,4))
-# 		y_whole=K.sum(y_true_f[:,1:],axis=1)
-# 		p_whole=K.sum(y_pred_f[:,1:],axis=1)
-# 		dice_whole=dice_(y_whole,p_whole)
-# 		return dice_whole
-
-# 	def dice_label_metric(y_true, y_pred, label):
-# 	#computes the dice for the enhancing region
-
-# 		y_true_f = K.reshape(y_true,shape=(-1,4))
-# 		y_pred_f = K.reshape(y_pred,shape=(-1,4))
-# 		y_enh=y_true_f[:,label]
-# 		p_enh=y_pred_f[:,label]
-# 		dice_en=dice_(y_enh,p_enh)
-# 		return dice_en
-
-# 	data_root_path = '../sample_vol/'
-
-# 	model_path = '/media/balaji/CamelyonProject/parth/saved_models/model_flair/model-archi.h5'
-# 	weights_path = '/media/balaji/CamelyonProject/parth/saved_models/model_flair/model-wts-flair.hdf5'
-
-# 	test_image, gt = utils.load_vol_brats('../sample_vol/Brats18_CBICA_ARZ_1', slicen=78)
-
-# 	model = load_model(model_path, 
-# 		custom_objects={'gen_dice_loss': gen_dice_loss,'dice_whole_metric':dice_whole_metric,
-# 		'dice_core_metric':dice_core_metric,'dice_en_metric':dice_en_metric})
-
-# 	test_image = test_image.reshape((1, 240, 240, 4))
-
-# 	A = Ablation(model, weights_path, dice_label_metric, 16, test_image)
-
-# 	print(A.ablate_filter(10))

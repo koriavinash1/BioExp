@@ -142,14 +142,60 @@ def soft_dice_loss(y_true, y_pred):
 
 smooth = 0.02
 
+def dice_whole_coef(y_true, y_pred):
+ 
+    y_true = np_utils.to_categorical(y_true, num_classes=4)
+    y_pred = np_utils.to_categorical(y_pred, num_classes=4)
+
+    y_true = np.reshape(y_true, (-1, 4))
+    y_pred = np.reshape(y_pred, (-1, 4))
+
+    y_whole = np.sum(y_true[:, 1:], axis = 1)
+    p_whole = np.sum(y_pred[:, 1:], axis= 1)
+    #print(y_whole.shape)
+    return(dice_coef(y_whole, p_whole))
+
+def dice_core_coef(y_true, y_pred):
+
+    y_true = np.reshape(y_true, (-1, 4))
+    y_pred = np.reshape(y_pred, (-1, 4))
+
+    y_whole = np.sum(y_true[:, [1,3]], axis = 1)
+    p_whole = np.sum(y_pred[:, [1,3]], axis= 1)
+    #print(y_whole.shape)
+    return(dice_coef(y_whole, p_whole))
+
+def dice_label_coef(y_true, y_pred, labels):
+
+    y_true = np_utils.to_categorical(y_true, num_classes=4)
+    y_pred = np_utils.to_categorical(y_pred, num_classes=4)
+
+    y_true = np.reshape(y_true, (-1, 4))
+    y_pred = np.reshape(y_pred, (-1, 4))
+    
+    y_whole = np.sum(y_true[:, list(labels)], axis = 1)
+    p_whole = np.sum(y_pred[:, list(labels)], axis = 1)
+
+    return(dice_coef(y_whole, p_whole))
+
+def dice_en_coef(y_true, y_pred):
+
+    y_true = np.reshape(y_true, (-1, 4))
+    y_pred = np.reshape(y_pred, (-1, 4))
+
+    y_whole = y_true[:, -1]
+    p_whole = y_pred[:, -1]
+    #print(y_whole.shape)
+    return(dice_coef(y_whole, p_whole))
+
 def dice_coef(y_true, y_pred):
-    y_true, y_pred = np.around(y_true), np.around(y_pred)
-    #print(y_true)
-    #y_true_f = np.reshape(y_true, ((-1, 4)))
-    #y_pred_f = np.reshape(y_pred, ((-1, 4)))
-    intersection = np.sum(y_true * y_pred)
+
+    intersection = np.sum(y_true * y_pred, axis = 0)
+
+    sum_r= np.sum(y_true, axis = 0)
+    sum_p = np.sum(y_pred, axis =  0)
     #print(intersection)
-    return (2. * intersection + smooth) / (np.sum(y_true) + np.sum(y_pred) + smooth)
+    return (2. * intersection + smooth) / (sum_p + sum_r + smooth)
 
 
 def dice_coef_loss(y_true, y_pred):

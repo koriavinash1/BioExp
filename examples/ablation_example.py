@@ -10,7 +10,7 @@ sys.path.append('..')
 from BioExp.helpers import utils
 from BioExp.spatial import ablation
 #from BioExp.helpers.losses import *
-from BioExp.spatial.losses import *
+from BioExp.helpers.losses import *
 from BioExp.helpers.metrics import *
 import pickle
 from lucid.modelzoo.vision_base import Model

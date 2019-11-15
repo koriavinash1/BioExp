@@ -5,12 +5,13 @@ import PIL
 import tensorflow as tf
 import os
 import tempfile
+from keras.utils import np_utils
 
 def normalize_scheme(slicennot):
     """
-        normalizes each slice, excluding gt
-        subtracts mean and div by std dev for each slice
-        clips top and bottom one percent of pixel intensities
+        -normalizes each slice, excluding gt
+        -subtracts mean and div by std dev for each slice
+        -clips top and bottom one percent of pixel intensities
     """
     normed_slices = np.zeros(( 4,155, 240, 240))
     for slicenix in range(4):
@@ -235,3 +236,7 @@ def apply_modifications_custom(model, custom_objects=None):
         return tf.keras.models.load_model(model_path, custom_objects=custom_objects)
     finally:
         os.remove(model_path)
+
+def one_hot(tensor, n_classes):
+    return(np_utils.to_categorical(tensor, num_classes=n_classes))
+
