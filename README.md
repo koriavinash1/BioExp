@@ -146,6 +146,8 @@ a = E.run(layer = 'conv2d_17', class_ = 'None', channel = 95, transforms=True)
 
 
 # Uncertainty
+
+## Usage
 ```
 from BioExp.uncertainty import uncertainty
 
