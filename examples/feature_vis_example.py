@@ -3,7 +3,6 @@ import sys
 sys.path.append('..')
 from BioExp.concept.feature import Feature_Visualizer
 
-
 # Initialize a class which loads a Lucid Model Instance with the required parameters
 class Load_Model(Model):
 
@@ -14,9 +13,9 @@ class Load_Model(Model):
 
 print ("pre load ...........................")
 # Initialize a Visualizer Instance
-E = Feature_Visualizer(Load_Model, savepath = '../results/', regularizer_params={'L1':1e-3, 'rotate':10})
+E = Feature_Visualizer(Load_Model, savepath = '../results/', regularizer_params={'L1':1e-3, 'rotate':4, 'TV':1e-7, })
 print ("loaded...................................")
 # Run the Visualizer
-a = E.run(layer = 'conv2d_17', channel = 49, transforms=True)
+a = E.run(layer = 'conv2d_17', channel = 49, transforms=True, style_template = '/home/brats/parth/BioExp/examples/test_image.npy')
 
 

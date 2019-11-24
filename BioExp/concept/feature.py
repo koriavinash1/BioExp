@@ -19,7 +19,7 @@ from decorator import decorator
 
 from lucid.optvis.param.color import to_valid_rgb
 from lucid.optvis.param.spatial import pixel_image, fft_image
-
+import os
 
 class Feature_Visualizer():
   """
@@ -101,14 +101,16 @@ class Feature_Visualizer():
         
         var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)[0]
         var_vec = tf.reshape(var, [-1, 4])
+        print(gram.get_shape().as_list())
         gram_vec = tf.reshape(gram, [-1, 4])
+        
 
         kernel_loss = 0
         for i in range(4):
           for j in range(4):
             kernel_loss  += kernel(var_vec[:, i], var_vec[:, j]) + kernel(gram_vec[:, i], gram_vec[:, j]) - 2*kernel(var_vec[:, i], gram_vec[:, j])
         
-        return tf.reduce_mean(T(layer)[..., n_channel]) - 1e-2*kernel_loss - self.L1*tf.norm(var) 
+        return tf.reduce_mean(T(layer)[..., n_channel]) - 1e-2*kernel_loss #- self.L1*tf.norm(var) 
       else:
         var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)[0]
         return tf.reduce_mean(T(layer)[..., n_channel]) # + tf.math.reduce_std(var)  - self.L1*tf.norm(var) 
@@ -141,7 +143,7 @@ class Feature_Visualizer():
               output = tf.concat([output, a], -1)
       return output
 
-  def run(self, layer, channel=None, style_template=None, transforms = False):
+  def run(self, layer, class_=None, channel=None, style_template=None, transforms = False):
     """
 
     """
@@ -150,16 +152,17 @@ class Feature_Visualizer():
     
 
     # layer_to_consider = ['conv2d_3', 'conv2d_5', 'conv2d_7', 'conv2d_13', 'conv2d_15', 'conv2d_17',  'conv2d_21', 'conv2d_23', 'conv2d_25']
-
+    print ("Hello .................")
     with tf.Graph().as_default() as graph, tf.Session() as sess:
 
       if style_template is not None:
         gram_template = tf.constant(np.load(style_template), #[1:-1,:,:],
                                     dtype=tf.float32) 
+      print('Gram Shape = {}'.format(gram_template.shape))
 
       obj = self._channel(self.layer+"/convolution", self.channel, gram=style_template)
       obj += -self.L1 * objectives.L1(constant=.5)
-      #obj += self.TV * objectives.total_variation()
+      obj += self.TV * objectives.total_variation()
       #obj += self.blur * objectives.blur_input_each_step()
 
       if transforms == True:
@@ -197,5 +200,9 @@ class Feature_Visualizer():
         plt.yticks([])
         texture_images.append(image)
         # show(np.hstack(T("input").eval()))
-    plt.savefig(self.savepath+self.layer+'_' + str(self.channel) +'.png', bbox_inches='tight')
+    if class_ is not None:
+        os.makedirs(os.path.join(self.savepath, class_), exist_ok=True)
+        plt.savefig(os.path.join(self.savepath, class_, self.layer+'_' + str(self.channel) +'.png'), bbox_inches='tight')
+    else:
+        plt.savefig(os.path.join(self.savepath, self.layer+'_' + str(self.channel) +'.png'), bbox_inches='tight')
     return np.array(texture_images).transpose(1, 2, 0)

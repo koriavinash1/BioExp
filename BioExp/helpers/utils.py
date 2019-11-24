@@ -45,7 +45,6 @@ def load_vol_brats( rootpath,
         pad : number of pixels to be padded
                 in X, Y direction
     """
-
     flair = glob( rootpath + '/*_flair.nii.gz')
     t2 = glob( rootpath + '/*_t2.nii.gz')
     gt = glob( rootpath + '/*_seg.nii.gz')
@@ -186,14 +185,26 @@ def predict_volume_brats(model, test_image, show=False):
     return np.array(prediction), np.array(prediction_probs)
 
 
-def load_numpy_slice(img_path, mask_path=None, seq='t1'):
+def load_numpy_slice(img_path, mask_path=None, seq='all', pad = 0):
     """
     """
-    seq_map = {'flair': 0, 't1': 1, 't2': 3, 't1c':2}
+    seq_map = {'flair': 0, 't1': 1, 't2': 3, 't1c':2, 'all':[0, 1, 2, 3]}
     seq = seq_map[seq] 
     img = np.load(img_path)
+    img = img[:,:,seq]
+    if len(img.shape) == 2:
+        img = img[..., None]
+        if pad:
+            npad = ((pad, pad), (pad, pad), (0, 0))
+            img  = np.pad(img, pad_width=npad, mode='constant', constant_values=0)
+        return img
+
     if mask_path:
-        mask = np.load(mask_path)
-        return img[:, :, seq][..., None], mask[...,None]
-    return img[:, :, seq][..., None]
+        mask = np.load(mask_path)[...,None]
+        if pad:
+            npad = ((pad, pad), (pad, pad), (0, 0))
+            img  = np.pad(img, pad_width=npad, mode='constant', constant_values=0)
+            mask  = np.pad(mask, pad_width=npad, mode='constant', constant_values=0)
+        return img, mask
+
 

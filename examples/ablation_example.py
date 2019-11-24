@@ -80,7 +80,7 @@ for seq in seq_to_consider:
 			sorted_df = layer_df.sort_values(['class_list', 'value'], ascending=[True, False])
 
 			for i in range(n_classes):
-				save_path = '../results/Ablation/unet_{}/'.format(seq) + model.layers[layer].name
+				save_path = 'Ablation/unet_{}/'.format(seq) + model.layers[layer].name
 				os.makedirs(save_path, exist_ok=True)
 				if mode == 'whole':
 					class_df = sorted_df

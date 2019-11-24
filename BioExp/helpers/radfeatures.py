@@ -16,9 +16,13 @@ class ExtractRadiomicFeatures():
                     all_ = True):
         
         self.img = input_image
-        if not input_mask.any():
-            self.GT = np.ones(tuple(list(self.img.shape)))
-        else: self.GT = input_mask
+        try:
+            if not input_mask.any():
+                self.GT = np.ones(tuple(list(self.img.shape)))
+            else: self.GT = input_mask
+        except:
+            if not input_mask: self.GT = np.ones(tuple(list(self.img.shape)))
+            else: self.GT = input_mask
         self.GT = sitk.GetImageFromArray(self.GT)
         self.img = sitk.GetImageFromArray(self.img) #, isVector=False)
         self.save_path = save_path
@@ -143,8 +147,8 @@ class ExtractRadiomicFeatures():
         _ = self.glcm_features()
         _ = self.glszm_features()
         _ = self.glrlm_features()
-        _ = self.ngtdm_features()
-        _ = self.gldm_features()
+        #_ = self.ngtdm_features()
+        # _ = self.gldm_features()
         
         df = pd.DataFrame(self.feat_dict)
 
