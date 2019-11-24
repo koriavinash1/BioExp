@@ -230,8 +230,8 @@ class Dissector():
 
         dice_json = {}
         dice_json['feature'] = []
-        for class_ in range(nclasses):
-            dice_json['class_'+str(class_)] = []
+        for class_ in nclasses.keys():
+            dice_json[class_] = []
 
 
         for i in range(nfeatures):
@@ -248,10 +248,12 @@ class Dissector():
 
             dice_json['feature'].append(i)
 
-            for class_ in range(nclasses):
-                mask = gt == class_
+            for class_ in nclasses.keys():
+                mask = gt == nclasses[class_][0]
+                for _class_ in nclasses[class_][1:]:
+                    mask += gt == _class_
                 class_dice = (np.sum(mask*(eroded_img>0)) + 1e-5)*2.0/(np.sum(mask*1.) + np.sum((eroded_img>0)*1.) + 1e-5) 
-                dice_json['class_'+str(class_)].append(class_dice)
+                dice_json[class_].append(class_dice)
 
             resized_masks[:,:,i] = eroded_img
 

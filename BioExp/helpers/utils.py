@@ -2,13 +2,17 @@ from glob import glob
 import numpy as np
 import SimpleITK as sitk
 import PIL
+import tensorflow as tf
+import os
+import tempfile
+from keras.utils import np_utils
 
 
 def normalize_scheme(slicennot):
     """
-        normalizes each slice, excluding gt
-        subtracts mean and div by std dev for each slice
-        clips top and bottom one percent of pixel intensities
+        -normalizes each slice, excluding gt
+        -subtracts mean and div by std dev for each slice
+        -clips top and bottom one percent of pixel intensities
     """
     normed_slices = np.zeros(( 4,155, 240, 240))
     for slicenix in range(4):
@@ -207,4 +211,44 @@ def load_numpy_slice(img_path, mask_path=None, seq='all', pad = 0):
             mask  = np.pad(mask, pad_width=npad, mode='constant', constant_values=0)
         return img, mask
 
+
+
+def load_images(img_path, normalize=True, zscore=False, mask=True):
+    """
+    """
+    if not mask:
+        img = np.array(PIL.Image.open(img_path).convert('RGB'))
+    else:
+        img = np.array(PIL.Image.open(img_path).convert('L'))
+    
+    if normalize:
+        img = (img - np.min(img))/(np.max(img) - np.min(img))
+
+    if zscore:
+        img = (img - np.mean(img))/ np.std(img)
+    
+    return img
+
+def apply_modifications_custom(model, custom_objects=None):
+    """Applies modifications to the model layers to create a new Graph. For example, simply changing
+    `model.layers[idx].activation = new activation` does not change the graph. The entire graph needs to be updated
+    with modified inbound and outbound tensors because of change in layer building function.
+    Args:
+        model: The `keras.models.Model` instance.
+    Returns:
+        The modified model with changes applied. Does not mutate the original `model`.
+    """
+    # The strategy is to save the modified model and load it back. This is done because setting the activation
+    # in a Keras layer doesnt actually change the graph. We have to iterate the entire graph and change the
+    # layer inbound and outbound nodes with modified tensors. This is doubly complicated in Keras 2.x since
+    # multiple inbound and outbound nodes are allowed with the Graph API.
+    model_path = os.path.join(tempfile.gettempdir(), next(tempfile._get_candidate_names()) + '.h5')
+    try:
+        model.save(model_path)
+        return tf.keras.models.load_model(model_path, custom_objects=custom_objects)
+    finally:
+        os.remove(model_path)
+
+def one_hot(tensor, n_classes):
+    return(np_utils.to_categorical(tensor, num_classes=n_classes))
 

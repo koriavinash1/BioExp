@@ -13,9 +13,9 @@ class Load_Model(Model):
 
 print ("pre load ...........................")
 # Initialize a Visualizer Instance
-E = Feature_Visualizer(Load_Model, savepath = '../results/', regularizer_params={'L1':1e-3, 'rotate':4, 'TV':1e-7, })
+E = Feature_Visualizer(Load_Model, savepath = '../results/', regularizer_params={'L1':1e-3, 'rotate':8})
 print ("loaded...................................")
 # Run the Visualizer
-a = E.run(layer = 'conv2d_17', channel = 49, transforms=True, style_template = '/home/brats/parth/BioExp/examples/test_image.npy')
+a = E.run(layer = 'conv2d_17', class_ = 'None', channel = 95, transforms=True)
 
 

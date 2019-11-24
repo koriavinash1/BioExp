@@ -19,6 +19,18 @@ model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
                                         'dice_en_metric':dice_en_metric})
 model.load_weights(weights_path)
 
+<<<<<<< HEAD
+=======
+seq = 'flair'
+layer_name = 'conv2d_3'
+dissector = spatial.Dissector(model=model,
+                            layer_name = layer_name,
+                            seq=seq)
+
+infoclasses = {}
+for i in range(1): infoclasses['class_'+str(i)] = (i,)
+infoclasses['whole'] = (1,2,3)
+>>>>>>> d756b35e1a6e6f774cd4d38751a317a17e2b120a
 
 def dataloader(nslice = 78):
 	def loader(img_path, mask_path):
@@ -40,6 +52,7 @@ for layer_name in layer_names:
 		                                        percentile = 85,
 							loader=dataloader())
 
+<<<<<<< HEAD
 
 	image, gt = utils.load_vol_brats('../sample_vol/Brats18_CBICA_AOP_1', slicen=105)
 
@@ -57,3 +70,12 @@ for layer_name in layer_names:
 		                save_path='results/Dissection/densenet/csv/',
 		                save_fmaps=False, 
 		                ROI = ROI)
+=======
+dissector.quantify_gt_features(image, gt, 
+                        threshold_maps, 
+                        nclasses=infoclasses, 
+                        nfeatures=9, 
+                        save_path='../results/Dissection/densenet/csv/',
+                        save_fmaps=False, 
+                        ROI = ROI)
+>>>>>>> d756b35e1a6e6f774cd4d38751a317a17e2b120a

@@ -1,8 +1,0 @@
-tensorlfow-gpu
-keras
-keras-vis
-lucid
-
-numpy
-matplotlib
-pandas
