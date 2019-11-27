@@ -3,6 +3,7 @@ import keras.backend as K
 import tensorflow as tf
 import keras
 from sklearn.preprocessing import OneHotEncoder
+from keras.utils import np_utils
 
 def dice(y_true, y_pred):
     #computes the dice score on two tensors
@@ -137,16 +138,6 @@ def soft_dice_loss(y_true, y_pred):
 
 smooth = 1e-3
 
-def dice_whole_coef(y_true, y_pred):
-
-    y_true = np.reshape(y_true, (-1, 4))
-    y_pred = np.reshape(y_pred, (-1, 4))
-
-    y_whole = np.sum(y_true[:, 1:], axis = 1)
-    p_whole = np.sum(y_pred[:, 1:], axis= 1)
-    #print(y_whole.shape)
-    return(dice_coef(y_whole, p_whole))
-
 def dice_core_coef(y_true, y_pred):
 
     y_true = np.reshape(y_true, (-1, 4))
@@ -157,15 +148,6 @@ def dice_core_coef(y_true, y_pred):
     #print(y_whole.shape)
     return(dice_coef(y_whole, p_whole))
 
-def dice_label_coef(y_true, y_pred, labels):
-
-    y_true = np.reshape(y_true, (-1, 4))
-    y_pred = np.reshape(y_pred, (-1, 4))
-    
-    y_whole = np.sum(y_true[:, list(labels)], axis = 1)
-    p_whole = np.sum(y_pred[:, list(labels)], axis = 1)
-
-    return(dice_coef(y_whole, p_whole))
 
 def dice_en_coef(y_true, y_pred):
 
@@ -190,38 +172,20 @@ def dice_whole_coef(y_true, y_pred):
     #print(y_whole.shape)
     return(dice_coef(y_whole, p_whole))
 
-def dice_core_coef(y_true, y_pred):
 
-    y_true = np.reshape(y_true, (-1, 4))
-    y_pred = np.reshape(y_pred, (-1, 4))
+def dice_label_coef(y_true, y_pred, labels, n_classes=4):
 
-    y_whole = np.sum(y_true[:, [1,3]], axis = 1)
-    p_whole = np.sum(y_pred[:, [1,3]], axis= 1)
-    #print(y_whole.shape)
-    return(dice_coef(y_whole, p_whole))
+    y_true = np_utils.to_categorical(y_true, num_classes=n_classes)
+    y_pred = np_utils.to_categorical(y_pred, num_classes=n_classes)
 
-def dice_label_coef(y_true, y_pred, labels):
-
-    y_true = np_utils.to_categorical(y_true, num_classes=4)
-    y_pred = np_utils.to_categorical(y_pred, num_classes=4)
-
-    y_true = np.reshape(y_true, (-1, 4))
-    y_pred = np.reshape(y_pred, (-1, 4))
+    y_true = np.reshape(y_true, (-1, n_classes))
+    y_pred = np.reshape(y_pred, (-1, n_classes))
     
-    y_whole = np.sum(y_true[:, list(labels)], axis = 1)
-    p_whole = np.sum(y_pred[:, list(labels)], axis = 1)
+    y_whole = np.sum(y_true[:, np.array(labels, dtype='int64')], axis = 1)
+    p_whole = np.sum(y_pred[:, np.array(labels, dtype='int64')], axis = 1)
 
     return(dice_coef(y_whole, p_whole))
 
-def dice_en_coef(y_true, y_pred):
-
-    y_true = np.reshape(y_true, (-1, 4))
-    y_pred = np.reshape(y_pred, (-1, 4))
-
-    y_whole = y_true[:, -1]
-    p_whole = y_pred[:, -1]
-    #print(y_whole.shape)
-    return(dice_coef(y_whole, p_whole))
 
 def dice_coef(y_true, y_pred):
 

@@ -5,12 +5,12 @@ import os
 import pandas as pd
 import numpy as np
 
-model = 'densenet'
-csv_root = 'results/Dissection/' + model +'/csv'
+model = 'simnet'
+csv_root = 'results_ET/Dissection/' + model +'/csv'
 layers = os.listdir(csv_root)
 
-classes_to_consider = ['class_1', 'class_2', 'class_3']
-dice_thresh = 0.6
+classes_to_consider = ['ET', 'CT',  'whole']
+dice_thresh = 0.2
 
 class_layer_count = {}
 for class_ in classes_to_consider:
@@ -21,7 +21,7 @@ for layer in layers:
 	df = pd.read_csv(os.path.join(csv_root, layer))
 	class_layer_count['layers'].append(int(layer.split('.')[0].split('_')[1]))
 	for class_ in classes_to_consider:
-		class_layer_count[class_].append(np.sum(df[class_].values > dice_thresh))
+		class_layer_count[class_].append(np.sum(df[class_].values > dice_thresh)*1.0/len(df[class_].values) )
 
 
 
@@ -32,13 +32,12 @@ width = 0.25  # the width of the bars
 
 fig, ax = plt.subplots()
 
-rects1 = ax.bar(ind - width, np.array(class_layer_count['class_1'])[idx], width,
-			label='class_1', color='r')
-rects2 = ax.bar(ind , np.array(class_layer_count['class_2'])[idx], width,
-			label='class_2', color='g')
-rects2 = ax.bar(ind + width, np.array(class_layer_count['class_3'])[idx], width,
-			label='class_3', color='b')
-
+rects1 = ax.bar(ind - width, np.array(class_layer_count['ET'])[idx], width,
+			label='ET', color='r')
+rects2 = ax.bar(ind , np.array(class_layer_count['CT'])[idx], width,
+			label='CT', color='g')
+rects4 = ax.bar(ind + 2*width, np.array(class_layer_count['whole'])[idx], width,
+			label='whole', color='b')
 
 ax.set_ylabel('class specific filter count')
 ax.set_xticks(ind)

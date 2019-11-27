@@ -160,7 +160,7 @@ class Feature_Visualizer():
       if style_template is not None:
         gram_template = tf.constant(np.load(style_template), #[1:-1,:,:],
                                     dtype=tf.float32) 
-      print('Gram Shape = {}'.format(gram_template.shape))
+        print('Gram Shape = {}'.format(gram_template.shape))
 
       obj  = self._channel(self.layer+"/convolution", self.channel, gram=style_template)
       obj += -self.L1 * objectives.L1(constant=.5)
