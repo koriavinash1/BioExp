@@ -193,7 +193,7 @@ def predict_volume_brats(model, test_image, show=False):
 def load_numpy_slice(img_path, mask_path=None, seq='t1'):
     """
     """
-    seq_map = {'flair': 0, 't1': 1, 't2': 3, 't1c':2}
+    seq_map = {'flair': 0, 't1': 1, 't2': 3, 't1c':2, 'all':[1, 3, 2, 0]}
     seq = seq_map[seq] 
     img = np.load(img_path)
     if mask_path:
