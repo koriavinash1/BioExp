@@ -15,10 +15,6 @@ class Ablation():
 	
 	"""
 
-	def __init__(self, model, weights, metric, layer, test_image, gt, classes, nclasses=4):
-		
-
-
 	def __init__(self, model, weights_pth, metric, layer_name, test_image, gt, classes, nclasses=4):
 		
 		"""
@@ -89,8 +85,8 @@ class Ablation():
 
 			dice_json['feature'].append(j)
 			for class_ in self.classinfo.keys():
-				dice_json[class_].append(self.metric(self.gt, prediction_unshaped.argmax(axis = -1)) - \
-					     		self.metric(self.gt, prediction_unshaped_occluded.argmax(axis = -1)))
+				dice_json[class_].append(self.metric(self.gt, prediction_unshaped.argmax(axis = -1), self.classinfo[class_]) - \
+					     		self.metric(self.gt, prediction_unshaped_occluded.argmax(axis = -1), self.classinfo[class_]))
 
 
 		df = pd.DataFrame(dice_json)

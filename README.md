@@ -25,8 +25,8 @@ BioExp supports the following interpretability methods:
 - Model Dissection Analysis
 - Model Ablation Analysis
 - Model Uncertainty Analysis
-  - Epistemic Uncertainty
-  - Aleatoric Uncertainty
+  - Epistemic Uncertainty using Bayesian Dropout
+  - Aleatoric Uncertainty using Test Time Augmentation
 - GradCAM
 - Activation Maximization
 
@@ -146,6 +146,8 @@ a = E.run(layer = 'conv2d_17', class_ = 'None', channel = 95, transforms=True)
 
 
 # Uncertainty
+
+## Usage
 ```
 from BioExp.uncertainty import uncertainty
 

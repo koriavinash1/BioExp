@@ -18,7 +18,6 @@ setuptools.setup(
      install_requires = [
          'pandas',
          'numpy',
-         'scipy==1.6.0',
          'matplotlib',
          'pillow',
          'simpleITK',

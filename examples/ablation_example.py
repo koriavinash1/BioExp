@@ -37,7 +37,6 @@ infoclasses = {}
 for i in range(1): infoclasses['class_'+str(i)] = (i,)
 infoclasses['whole'] = (1,2,3)
 
-
 data_root_path = '../sample_vol/'
 layer_name = 'conv2d_3'
 test_image, gt = utils.load_vol_brats('../sample_vol/Brats18_CBICA_ARZ_1', slicen=78)
@@ -51,3 +50,4 @@ A = spatial.Ablation(model = moedl,
 				nclasses    = 4)
 
 df = A.ablate_filter(step = 1)
+

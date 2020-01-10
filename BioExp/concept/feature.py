@@ -104,14 +104,18 @@ class Feature_Visualizer():
         
         var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)[0]
         var_vec = tf.reshape(var, [-1, 4])
+        print(gram.get_shape().as_list())
         gram_vec = tf.reshape(gram, [-1, 4])
+        
 
         kernel_loss = 0
         for i in range(4):
           for j in range(4):
             kernel_loss  += kernel(var_vec[:, i], var_vec[:, j]) + kernel(gram_vec[:, i], gram_vec[:, j]) - 2*kernel(var_vec[:, i], gram_vec[:, j])
+
         # kernel_loss = tf.math.abs((var_vec - gram_vec)**2)
         return tf.reduce_mean(T(layer)[..., n_channel]) - gram_coeff*kernel_loss - self.L1*tf.norm(var) 
+
       else:
         var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)[0]
         return tf.reduce_mean(T(layer)[..., n_channel]) # + tf.math.reduce_std(var)  - self.L1*tf.norm(var) 
@@ -156,10 +160,10 @@ class Feature_Visualizer():
     self.layer = layer
     self.channel = channel if channel is not None else 0
     
-
     with tf.Graph().as_default() as graph, tf.Session() as sess:
 
       if style_template is not None:
+
         try:
           gram_template = tf.constant(np.load(style_template), #[1:-1,:,:],
                                       dtype=tf.float32) 
@@ -175,6 +179,7 @@ class Feature_Visualizer():
       obj += -self.L1 * objectives.L1(constant=.5)
       obj += -self.TV * objectives.total_variation()
       #obj += self.blur * objectives.blur_input_each_step()
+
 
       if transforms == True:
         transforms = [
@@ -214,6 +219,7 @@ class Feature_Visualizer():
         # plt.yticks([])
         texture_images.append(image)
         # show(np.hstack(T("input").eval()))
+
         os.makedirs(os.path.join(self.savepath, class_), exist_ok=True)
         # print(self.savepath, class_, self.layer+'_' + str(self.channel) +'.png')
         # plt.savefig(os.path.join(self.savepath, class_, self.layer+'_' + str(self.channel) + '_' + str(i) +'_noreg.png'), bbox_inches='tight')
@@ -221,3 +227,4 @@ class Feature_Visualizer():
       # print(np.array(texture_images).shape) 
 
     return np.array(texture_images)
+

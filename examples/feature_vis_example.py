@@ -2,9 +2,11 @@ from lucid.modelzoo.vision_base import Model
 import sys
 sys.path.append('..')
 from BioExp.concept.feature import Feature_Visualizer
+
 import matplotlib.pyplot as plt
 import os
 import numpy as np
+
 
 # Initialize a class which loads a Lucid Model Instance with the required parameters
 class Load_Model(Model):

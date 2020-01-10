@@ -63,7 +63,8 @@ class Dissector():
     def get_threshold_maps(self, 
                             dataset_path, 
                             save_path, 
-                            percentile):
+                            percentile,
+                            loader=None):
         """
             Estimates threshold maps for given percentile value
 
@@ -82,10 +83,9 @@ class Dissector():
 
             for i in range(len(input_paths) if len(input_paths) < 500 else 500):
                 print ("[INFO: BioExp] Slice no {} -- Working on {}".format(self.layer_name, i))
-                input_, label_ = load_numpy_slice(os.path.join(dataset_path, input_paths[i]), 
+                input_, label_ = loader(os.path.join(dataset_path, input_paths[i]), 
 					os.path.join(dataset_path, 
-					input_paths[i]).replace('mask', 'label').replace('labels', 'masks'),
-                                        self.seq)
+					input_paths[i]).replace('mask', 'label').replace('labels', 'masks'))
                 output = np.squeeze(self.model.predict(input_[None, ...]))
                 fmaps.append(output)
 
