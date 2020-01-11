@@ -9,7 +9,7 @@ from scipy.cluster.hierarchy import dendrogram
 from sklearn.cluster import AgglomerativeClustering
 
 
-class cluster():
+class Cluster():
 	"""
 	A class for conducting an cluster study on a trained keras model instance
 

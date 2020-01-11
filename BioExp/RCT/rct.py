@@ -99,16 +99,16 @@ class intervention():
 
 if __name__ == "__main__":
 
-	model = load_model('/home/parth/Interpretable_ML/saved_models/U_resnet/ResUnet.h5', 
+	model = load_model('/home/brats/parth/logs/U_resnet/ResUnet.h5', 
                 custom_objects={'gen_dice_loss':gen_dice_loss,
                                 'dice_whole_metric':dice_whole_metric,
                                 'dice_core_metric':dice_core_metric,
                                 'dice_en_metric':dice_en_metric})
 
-	model.load_weights('/home/parth/Interpretable_ML/saved_models/U_resnet/ResUnet.40_0.559.hdf5')
+	model.load_weights('/home/brats/parth/logs/U_resnet/ResUnet.40_0.559.hdf5')
 
 
 	I = intervention(model)
 
-	I.mean_swap('/home/parth/Interpretable_ML/BioExp/sample_vol/brats/**')
+	I.mean_swap('/home/brats/parth/brats_2018/*/**')
 

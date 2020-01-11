@@ -9,7 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 from glob import glob
 from BioExp.helpers import utils
-from BioExp.spatial import clusters
+from BioExp.graphs import concept
 import os
 
 from keras.backend.tensorflow_backend import set_session
@@ -29,14 +29,13 @@ parser = parser.parse_args()
 seq_map = {'flair': 0, 't1': 1, 't2': 3, 't1c':2}
 seq = parser.seq
 
-
 print (seq)
 model_path        = '../../saved_models/model_{}/model-archi.h5'.format(seq)
 weights_path      = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
 
 
-
-layers_to_consider = ['conv2d_2', 'conv2d_3', 'conv2d_4', 'conv2d_5']
+metric = dice_label_coef
+layer_names = [ 'conv2d_6', 'conv2d_12', 'conv2d_18']
 
 
 model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
@@ -45,7 +44,10 @@ model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
 	                                'dice_en_metric':dice_en_metric})
 model.load_weights(weights_path)
 
-for layer_name in layers_to_consider:
-	C = clusters.Cluster(model, weights_path, layer_name)
-	labels = C.get_clusters(threshold = 0.5, save_path='cluster_results')
-	print (labels)
+
+
+G = concept.ConceptGraph(model, weights_path, metric, layer_names)
+json = G.get_concepts('.')
+
+from pprint import pprint
+pprint (json)
