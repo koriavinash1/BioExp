@@ -1,53 +1,81 @@
-import keras
-import numpy as np
 import sys
 sys.path.append('..')
-from BioExp import spatial
-from BioExp.helpers import utils
-import SimpleITK as sitk
-from BioExp.spatial import Ablation
-#from BioExp.helpers.losses import *
-from BioExp.helpers.losses import *
-from BioExp.helpers.metrics import *
-import pickle
-from lucid.modelzoo.vision_base import Model
-from BioExp.concept.feature import Feature_Visualizer
-from tqdm import tqdm
-from keras.backend.tensorflow_backend import set_session
+import argparse
+import keras
+import numpy as np
+import tensorflow as tf
 from keras.models import load_model
+import pandas as pd
+from tqdm import tqdm
+from glob import glob
+from BioExp.helpers import utils
+from BioExp.spatial import ablation
+import os
+
+from keras.backend.tensorflow_backend import set_session
+from BioExp.helpers.metrics import *
+from BioExp.helpers.losses import *
+
 config = tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.3
 set_session(tf.Session(config=config))
 
-seq = 'flair'
-
-data_root_path = '../sample_vol/'
-
-model_path = '../trained_models/U_resnet/ResUnet.h5'
-weights_path = '../trained_models/U_resnet/ResUnet.40_0.559.hdf5'
+	
+parser = argparse.ArgumentParser(description='feature study')
+parser.add_argument('--seq', default='flair', type=str, help='mri sequence')
+parser = parser.parse_args()
 
 
-model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
-                                        'dice_whole_metric':dice_whole_metric,
-                                        'dice_core_metric':dice_core_metric,
-                                        'dice_en_metric':dice_en_metric})
-model.load_weights(weights_path)
+seq_map = {'flair': 0, 't1': 1, 't2': 3, 't1c':2}
+seq = parser.seq
+
+
+print (seq)
+model_path        = '../../saved_models/model_{}/model-archi.h5'.format(seq)
+weights_path      = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, seq)
+
+results_root_path = './results/'
+data_root_path = '/home/brats/parth/test-data/HGG/'
+
+
+layers_to_consider = ['conv2d_2', 'conv2d_3', 'conv2d_4', 'conv2d_5']
+input_name = 'input_1'
+
+#########################################################################
+
+feature_maps = []
+layers = []
+classes = []
+
 
 infoclasses = {}
-for i in range(1): infoclasses['class_'+str(i)] = (i,)
-infoclasses['whole'] = (1,2,3)
+for i in range(4): infoclasses['class_'+str(i)] = (i,)
+infoclasses['whole'] = (1,2,3,)
+infoclasses['ET'] = (3,)
+infoclasses['CT'] = (1,3,)
+num_images = 2
+metric = dice_label_coef ## (gt, pred, class_)
 
-data_root_path = '../sample_vol/'
-layer_name = 'conv2d_3'
-test_image, gt = utils.load_vol_brats('../sample_vol/Brats18_CBICA_ARZ_1', slicen=78)
-A = spatial.Ablation(model = moedl, 
-				weights_pth = weights_path, 
-				metric      = dice_label_coef, 
-				layer_name  = layer_name, 
-				test_image  = test_image, 
-				gt 	    = gt, 
-				classes     = infoclasses, 
-				nclasses    = 4)
+model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
+	                                'dice_whole_metric':dice_whole_metric,
+	                                'dice_core_metric':dice_core_metric,
+	                                'dice_en_metric':dice_en_metric})
 
-df = A.ablate_filter(step = 1)
+for layer_name in layers_to_consider:	
+	for i, file in tqdm(enumerate(glob(data_root_path +'*')[5:5	+num_images])):
 
+		model.load_weights(weights_path)
+		image, gt = utils.load_vol_brats(file, slicen=78)
+		image = image[:, :, seq_map[seq]][None, ..., None]
+
+		A = ablation.Ablate(model, weights_path, metric, layer_name, image, gt, classes = infoclasses, image_name=str(i))
+		path = 'results/'
+		os.makedirs(path, exist_ok=True)
+
+
+		df1 = A.ablate_filters(save_path='./results/', step=4)
+		if i == 0: df = df1
+		else: df.iloc[:,1:] += df1.iloc[:,1:]
+	
+	df.iloc[:,1:] = df.iloc[:,1:]/(1. * num_images)
+	print (df)
