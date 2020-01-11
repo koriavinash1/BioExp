@@ -5,12 +5,12 @@ import os
 import pandas as pd
 import numpy as np
 
-model = 'simnet'
+model = 'densenet'
 csv_root = 'results_ET/Dissection/' + model +'/csv'
 layers = os.listdir(csv_root)
 
 classes_to_consider = ['ET', 'CT',  'whole']
-dice_thresh = 0.2
+dice_thresh = 0.06
 
 class_layer_count = {}
 for class_ in classes_to_consider:
