@@ -45,13 +45,12 @@ class ConceptGraph():
 		self.weights    = weights_pth
 		self.layers     = layer_names
 		self.metric     = metric
-		self.layer_idxs = []
-		
-		for layer_name in self.layers:
-			for idx, layer in enumerate(self.model.layers):
-				if layer.name == layer_name:
-					self.layer_idxs.append(idx)
 
+
+	def get_layer_idx(self, layer_name):
+		for idx, layer in enumerate(self.model.layers):
+			if layer.name == layer_name:
+				return idx
 
 	def get_concepts(self, save_path):
 		"""
@@ -79,3 +78,60 @@ class ConceptGraph():
 			pickle.dump(graph_info, f)
 
 		return graph_info
+
+
+	def generate_link(self, fmaps):
+		pass
+		
+	def generate_fmaps(self, nodeA_info, nodeB_info, dataset_path, loader, save_path):
+		"""
+			get link between two nodes, nodeA, nodeB
+
+			nodeA_info    : {'layer_name', 'layer_idxs'}
+			nodeB_info    : {'layer_name', 'layer_idxs'}
+		"""
+
+		nodeA_layer = nodeA_info['layer_name']
+		nodeA_idx   = self.get_layer_idx(nodeA_info['layer_name'])
+		nodeA_idxs  = nodeA_info['layer_idxs']
+
+		nodeB_layer = nodeB_info['layer_name']
+		nodeB_idx   = self.get_layer_idx(nodeB_info['layer_name'])
+		nodeB_idxs  = nodeB_info['layer_idxs']
+
+
+		self.model.load_weights(self.weights, by_name = True)
+		self.layer_weights = np.array(self.model.layers[nodeA_idx].get_weights())
+		occluded_weights = self.layer_weights.copy()
+
+		for j in nodeB_idxs:
+			occluded_weights[0][:,:,:,j] = 0
+			occluded_weights[1][j] = 0
+
+		self.model.layers[nodeA_idx].set_weights(occluded_weights)
+		if os.path.exists(os.path.join(save_path, 'A_{}_B_{}_fmaps.npy'.format(nodeA_info['concept_name'], nodeB_info['concept_name']))):
+			fmaps = np.load(os.path.join(save_path, 'A_{}_B_{}_fmaps.npy'.format(nodeA_info['concept_name'], nodeB_info['concept_name']))) 
+
+		else:
+			fmaps = []
+			input_paths = os.listdir(dataset_path)
+
+			for i in range(len(input_paths) if len(input_paths) < 500 else 500):
+				print ("[INFO: BioExp] Slice no {} -- Working on {}".format(self.layer_name, i))
+				input_, label_ = loader(os.path.join(dataset_path, input_paths[i]), 
+										os.path.join(dataset_path, 
+													input_paths[i]).replace('mask', 'label').replace('labels', 'masks'))
+				output = np.squeeze(self.model.predict(input_[None, ...]))
+				fmaps.append(output)
+
+			fmaps = np.array(fmaps)
+
+			if not os.path.exists(save_path): 
+				os.makedirs(save_path)
+
+			np.save(os.path.join(save_path, 'A_{}_B_{}_fmaps.npy'.format(nodeA_info['concept_name'], nodeB_info['concept_name'])), fmaps)
+
+
+
+
+
