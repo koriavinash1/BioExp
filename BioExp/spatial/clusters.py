@@ -11,7 +11,7 @@ from sklearn.cluster import AgglomerativeClustering
 
 class cluster():
 	"""
-	A class for conducting an ablation study on a trained keras model instance
+	A class for conducting an cluster study on a trained keras model instance
 
 	"""     
 
