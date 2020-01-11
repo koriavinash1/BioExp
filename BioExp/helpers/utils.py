@@ -193,6 +193,7 @@ def load_numpy_slice(img_path, mask_path=None, seq='all', pad = 0):
     """
     """
     seq_map = {'flair': 0, 't1': 1, 't2': 3, 't1c':2, 'all':[0, 1, 2, 3]}
+
     seq = seq_map[seq] 
     img = np.load(img_path)
     img = img[:,:,seq]

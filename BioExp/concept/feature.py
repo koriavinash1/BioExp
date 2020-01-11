@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 import lucid.optvis.param as param
 import lucid.optvis.render as render
 from lucid.misc.io.showing import _image_url, _display_html
@@ -20,6 +20,9 @@ from decorator import decorator
 from lucid.optvis.param.color import to_valid_rgb
 from lucid.optvis.param.spatial import pixel_image, fft_image
 import os
+import sys
+sys.path.append('../..')
+# from BioExp.helpers import transform
 
 class Feature_Visualizer():
   """
@@ -92,7 +95,7 @@ class Feature_Visualizer():
 
 
   @wrap_objective(require_format='NHWC')
-  def _channel(self, layer, n_channel, gram = None):
+  def _channel(self, layer, n_channel, gram = None, gram_coeff = 1e-4):
     """Visualize a single channel"""
 
     def inner(T):
@@ -109,8 +112,10 @@ class Feature_Visualizer():
         for i in range(4):
           for j in range(4):
             kernel_loss  += kernel(var_vec[:, i], var_vec[:, j]) + kernel(gram_vec[:, i], gram_vec[:, j]) - 2*kernel(var_vec[:, i], gram_vec[:, j])
-        
-        return tf.reduce_mean(T(layer)[..., n_channel]) - 1e-2*kernel_loss #- self.L1*tf.norm(var) 
+
+        # kernel_loss = tf.math.abs((var_vec - gram_vec)**2)
+        return tf.reduce_mean(T(layer)[..., n_channel]) - gram_coeff*kernel_loss - self.L1*tf.norm(var) 
+
       else:
         var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)[0]
         return tf.reduce_mean(T(layer)[..., n_channel]) # + tf.math.reduce_std(var)  - self.L1*tf.norm(var) 
@@ -143,7 +148,7 @@ class Feature_Visualizer():
               output = tf.concat([output, a], -1)
       return output
 
-  def run(self, layer, class_, channel=None, style_template=None, transforms = False, opt_steps = 1000):
+  def run(self, layer, class_, channel=None, style_template=None, transforms = False, opt_steps = 500, gram_coeff = 1e-14):
     """
     layer         : layer_name to visualize
     class_        : class to consider
@@ -158,22 +163,30 @@ class Feature_Visualizer():
     with tf.Graph().as_default() as graph, tf.Session() as sess:
 
       if style_template is not None:
-        gram_template = tf.constant(np.load(style_template), #[1:-1,:,:],
-                                    dtype=tf.float32) 
-        print('Gram Shape = {}'.format(gram_template.shape))
 
-      obj  = self._channel(self.layer+"/convolution", self.channel, gram=style_template)
+        try:
+          gram_template = tf.constant(np.load(style_template), #[1:-1,:,:],
+                                      dtype=tf.float32) 
+        except:
+          image = cv2.imread(style_template)
+          print(image.shape)
+          gram_template = tf.constant(np.pad(cv2.imread(style_template), ((1, 1), (0, 0))), #[1:-1,:,:],
+                                      dtype=tf.float32) 
+      else:
+        gram_template = None
+
+      obj  = self._channel(self.layer+"/convolution", self.channel, gram=gram_template, gram_coeff = gram_coeff)
       obj += -self.L1 * objectives.L1(constant=.5)
-      obj += self.TV * objectives.total_variation()
-      obj += self.blur * objectives.blur_input_each_step()
+      obj += -self.TV * objectives.total_variation()
+      #obj += self.blur * objectives.blur_input_each_step()
 
 
       if transforms == True:
         transforms = [
-          transform.pad(2 * self.jitter),
+          transform.pad(self.jitter),
           transform.jitter(self.jitter),
-          transform.random_scale([self.scale ** (n/10.) for n in range(-10, 11)]),
-          transform.random_rotate(range(-self.rotate, self.rotate + 1))
+          #transform.random_scale([self.scale ** (n/10.) for n in range(-10, 11)]),
+          #transform.random_rotate(range(-self.rotate, self.rotate + 1))
         ]
       else:
         transforms = []
@@ -189,23 +202,29 @@ class Feature_Visualizer():
         T("vis_op").run()
 
       plt.figure(figsize=(10,10))
-      
+      # for i in range(1, self.n_channels+1):
+      #   plt.imshow(np.load(style_template)[:, :, i-1], cmap='gray',
+      #              interpolation='bilinear', vmin=0., vmax=1.)
+      #   plt.savefig('gram_template_{}.png'.format(i), bbox_inches='tight')
+        
       texture_images = []
 
-      for i in range(1, self.n_channels+1):
-        plt.subplot(1, self.n_channels, i)
+      for i in range(1 self.n_channels+1):
+        # plt.subplot(1, self.n_channels, i)
         image = T("input").eval()[:, :, :, i - 1].reshape((240, 240))
         print("channel: ", i, image.min(), image.max())
-        plt.imshow(image, cmap='gray',
-                   interpolation='bilinear', vmin=0., vmax=1.)
-        plt.xticks([])
-        plt.yticks([])
+        # plt.imshow(image, cmap='gray',
+        #            interpolation='bilinear', vmin=0., vmax=1.)
+        # plt.xticks([])
+        # plt.yticks([])
         texture_images.append(image)
         # show(np.hstack(T("input").eval()))
 
-    if class_ is not None:
         os.makedirs(os.path.join(self.savepath, class_), exist_ok=True)
-        plt.savefig(os.path.join(self.savepath, class_, self.layer+'_' + str(self.channel) +'.png'), bbox_inches='tight')
-    else:
-        plt.savefig(os.path.join(self.savepath, self.layer+'_' + str(self.channel) +'.png'), bbox_inches='tight')
-    return np.array(texture_images).transpose(1, 2, 0)
+        # print(self.savepath, class_, self.layer+'_' + str(self.channel) +'.png')
+        # plt.savefig(os.path.join(self.savepath, class_, self.layer+'_' + str(self.channel) + '_' + str(i) +'_noreg.png'), bbox_inches='tight')
+      # plt.show()
+      # print(np.array(texture_images).shape) 
+
+    return np.array(texture_images)
+
