@@ -73,7 +73,7 @@ class ConceptGraph():
 				graph_info['feature_map_idxs'].append(list(idxs))
 				node += 1
 
-		os.makedirs(json_path, exist_ok = True)
+		os.makedirs(save_path, exist_ok = True)
 		with open(os.path.join(save_path, 'concept_graph.pickle'), 'wb') as f:
 			pickle.dump(graph_info, f)
 
@@ -81,34 +81,44 @@ class ConceptGraph():
 
 
 	def generate_link(self, fmaps):
-		pass
+		"""
+			links is some norm information of feature activation maps
+
+			fmaps: activation maps
+		"""
+		return np.linalg.norm(fmaps)
 		
 	def generate_fmaps(self, nodeA_info, nodeB_info, dataset_path, loader, save_path):
 		"""
 			get link between two nodes, nodeA, nodeB
+			occlude at nodeA and observe changes in nodeB
 
 			nodeA_info    : {'layer_name', 'layer_idxs'}
 			nodeB_info    : {'layer_name', 'layer_idxs'}
 		"""
 
-		nodeA_layer = nodeA_info['layer_name']
 		nodeA_idx   = self.get_layer_idx(nodeA_info['layer_name'])
 		nodeA_idxs  = nodeA_info['layer_idxs']
 
-		nodeB_layer = nodeB_info['layer_name']
 		nodeB_idx   = self.get_layer_idx(nodeB_info['layer_name'])
 		nodeB_idxs  = nodeB_info['layer_idxs']
 
 
+		self.model = Model(inputs=self.model.input, outputs=self.model.get_layer(nodeB_info['layer_name']).output)
 		self.model.load_weights(self.weights, by_name = True)
-		self.layer_weights = np.array(self.model.layers[nodeA_idx].get_weights())
-		occluded_weights = self.layer_weights.copy()
 
-		for j in nodeB_idxs:
-			occluded_weights[0][:,:,:,j] = 0
-			occluded_weights[1][j] = 0
+		try:
+			self.layer_weights = np.array(self.model.layers[nodeA_idx].get_weights())
+			occluded_weights = self.layer_weights.copy()
 
-		self.model.layers[nodeA_idx].set_weights(occluded_weights)
+			for j in nodeA_idxs:
+				occluded_weights[0][:,:,:,j] = 0
+				occluded_weights[1][j] = 0
+
+			self.model.layers[nodeA_idx].set_weights(occluded_weights)
+		except:
+			print ("nodeA is ahead of nodeB")
+
 		if os.path.exists(os.path.join(save_path, 'A_{}_B_{}_fmaps.npy'.format(nodeA_info['concept_name'], nodeB_info['concept_name']))):
 			fmaps = np.load(os.path.join(save_path, 'A_{}_B_{}_fmaps.npy'.format(nodeA_info['concept_name'], nodeB_info['concept_name']))) 
 
@@ -117,11 +127,12 @@ class ConceptGraph():
 			input_paths = os.listdir(dataset_path)
 
 			for i in range(len(input_paths) if len(input_paths) < 500 else 500):
-				print ("[INFO: BioExp] Slice no {} -- Working on {}".format(self.layer_name, i))
+				print ("[INFO: BioExp] Slice no -- Working on {}".format(i))
 				input_, label_ = loader(os.path.join(dataset_path, input_paths[i]), 
 										os.path.join(dataset_path, 
 													input_paths[i]).replace('mask', 'label').replace('labels', 'masks'))
 				output = np.squeeze(self.model.predict(input_[None, ...]))
+				output = output[:,:, nodeB_idxs]
 				fmaps.append(output)
 
 			fmaps = np.array(fmaps)
@@ -132,6 +143,42 @@ class ConceptGraph():
 			np.save(os.path.join(save_path, 'A_{}_B_{}_fmaps.npy'.format(nodeA_info['concept_name'], nodeB_info['concept_name'])), fmaps)
 
 
+		link = self.generate_link(fmaps)
+		return link
 
 
+	def generate_graph(self, graph_info, dataset_path = None, loader = None, save_path=None):
+		"""
+			generates graph adj matrix for computation
 
+			graph_info: {'concept_name', 'layer_name', 'feature_map_idxs'}
+			save_path : graph_path or path to save graph
+		"""
+
+		if os.path.exists(os.path.join(save_path, 'concept_adj_matrix.pickle')):
+			with open(os.path.join(save_path, 'concept_adj_matrix.pickle'), 'rb') as f:
+				AM = pickle.load(f) 
+
+		else:
+			nodes = len(graph_info['concept_name'])
+
+			AM = []
+			for nodeA in range(nodes):
+				AM_row = []
+				for nodeB in range(nodes):
+					nodeA_info = {'concept_name': graph_info['concept_name'][nodeA],
+									'layer_name': graph_info['layer_name'][nodeA],
+									'layer_idxs': graph_info['feature_map_idxs'][nodeA]}
+					nodeB_info = {'concept_name': graph_info['concept_name'][nodeB],
+									'layer_name': graph_info['layer_name'][nodeB],
+									'layer_idxs': graph_info['feature_map_idxs'][nodeB]}
+					AM_row.append(self.generate_fmaps(nodeA_info, nodeB_info,
+													dataset_path = dataset_path, 
+													loader = loader, 
+													save_path = save_path))
+				AM.append(AM_row)
+
+			with open(os.path.join(save_path, 'concept_adj_matrix.pickle'), 'wb') as f:
+				pickle.dump(AM, f) 
+
+		return AM

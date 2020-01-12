@@ -45,9 +45,18 @@ model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
 model.load_weights(weights_path)
 
 
+def dataloader(nslice = 78):
+	def loader(img_path, mask_path):
+		image, gt =  utils.load_vol_brats(img_path, slicen=nslice)
+		return image[:,:, seq_map[seq]][:,:, None], gt
+	return loader
+data_root_path = '/home/brats/parth/test-data/HGG/'
+
 
 G = concept.ConceptGraph(model, weights_path, metric, layer_names)
 json = G.get_concepts('.')
+print (json)
 
-from pprint import pprint
-pprint (json)
+# generate graph adj matrix
+AM = G.generate_graph(json, dataset_path = data_root_path, loader = dataloader(), save_path = '.')
+print(AM)
