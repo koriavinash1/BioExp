@@ -58,5 +58,5 @@ json = G.get_concepts('.')
 print (json)
 
 # generate graph adj matrix
-AM = G.generate_graph(json, dataset_path = data_root_path, loader = dataloader(), save_path = '.')
+AM = G.generate_graph(json, dataset_path = data_root_path, loader = dataloader(), save_path = './graph')
 print(AM)

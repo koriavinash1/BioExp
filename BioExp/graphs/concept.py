@@ -104,18 +104,18 @@ class ConceptGraph():
 		nodeB_idxs  = nodeB_info['layer_idxs']
 
 
-		self.model = Model(inputs=self.model.input, outputs=self.model.get_layer(nodeB_info['layer_name']).output)
-		self.model.load_weights(self.weights, by_name = True)
+		model = Model(inputs=self.model.input, outputs=self.model.get_layer(nodeB_info['layer_name']).output)
+		model.load_weights(self.weights, by_name = True)
 
 		try:
-			self.layer_weights = np.array(self.model.layers[nodeA_idx].get_weights())
+			self.layer_weights = np.array(model.layers[nodeA_idx].get_weights())
 			occluded_weights = self.layer_weights.copy()
 
 			for j in nodeA_idxs:
 				occluded_weights[0][:,:,:,j] = 0
 				occluded_weights[1][j] = 0
 
-			self.model.layers[nodeA_idx].set_weights(occluded_weights)
+			model.layers[nodeA_idx].set_weights(occluded_weights)
 		except:
 			print ("nodeA is ahead of nodeB")
 
@@ -131,7 +131,7 @@ class ConceptGraph():
 				input_, label_ = loader(os.path.join(dataset_path, input_paths[i]), 
 										os.path.join(dataset_path, 
 													input_paths[i]).replace('mask', 'label').replace('labels', 'masks'))
-				output = np.squeeze(self.model.predict(input_[None, ...]))
+				output = np.squeeze(model.predict(input_[None, ...]))
 				output = output[:,:, nodeB_idxs]
 				fmaps.append(output)
 
