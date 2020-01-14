@@ -9,7 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 from glob import glob
 from BioExp.helpers import utils
-from BioExp.spatial import clusters
+from BioExp.clusters import clusters
 import os
 
 from keras.backend.tensorflow_backend import set_session
