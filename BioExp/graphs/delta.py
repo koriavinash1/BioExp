@@ -14,7 +14,7 @@ import matplotlib.gridspec as gridspec
 import pandas as pd
 from ..helpers.utils import *
 from ..spatial.ablation import Ablate
-from ..spatial.clusters import Cluster
+from ..clusters.clusters import Cluster
 
 from keras.models import Model
 from keras.utils import np_utils

@@ -18,7 +18,7 @@ class intervention():
 	def __init__(self, model):
 		self.model = model
 
-	def mean_swap(self, test_path, plot = True, save_path='/home/parth/Interpretable_ML/BioExp/results/RCT'):
+	def mean_swap(self, test_path, plot = True, save_path='home/brats/parth/BioExp/results/RCT'):
 
 		channel = 3
 
@@ -73,7 +73,7 @@ class intervention():
 
 if __name__ == "__main__":
 
-	model = load_model('/home/parth/Interpretable_ML/saved_models/densenet/densenet121.h5', 
+	model = load_model('/home/brats/parth/saved_models/densenet/densenet121.h5', 
                 custom_objects={'gen_dice_loss':gen_dice_loss,
                                 'dice_whole_metric':dice_whole_metric,
                                 'dice_core_metric':dice_core_metric,

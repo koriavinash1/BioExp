@@ -124,7 +124,7 @@ class Dissector():
 
                     concept = np.ma.masked_where(concept == 0, concept)
                     ax = plt.subplot(gs[i, j])
-                    im = ax.imshow(img[:,:,3], cmap='gray')
+                    im = ax.imshow(img, cmap='gray')
                     im = ax.imshow(concept, alpha=0.5)
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
@@ -187,11 +187,12 @@ class Dissector():
             except: pass
             resized_masks[:,:,i] = eroded_img
 
-        ncols = int(np.ceil(nfeatures**0.5))
-        nrows = int(np.ceil(nfeatures**0.5))
 
-
-        self._save_features(image, resized_masks, nrows, ncols, save_path)
+        if save_path:
+            ncols = int(np.ceil(nfeatures**0.5))
+            nrows = int(np.ceil(nfeatures**0.5))
+            self._save_features(image, resized_masks, nrows, ncols, save_path)
+            
         return resized_masks
 
 
