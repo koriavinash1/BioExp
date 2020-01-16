@@ -187,11 +187,12 @@ class Dissector():
             except: pass
             resized_masks[:,:,i] = eroded_img
 
-        ncols = int(np.ceil(nfeatures**0.5))
-        nrows = int(np.ceil(nfeatures**0.5))
 
-
-        self._save_features(image, resized_masks, nrows, ncols, save_path)
+        if save_path:
+            ncols = int(np.ceil(nfeatures**0.5))
+            nrows = int(np.ceil(nfeatures**0.5))
+            self._save_features(image, resized_masks, nrows, ncols, save_path)
+            
         return resized_masks
 
 
