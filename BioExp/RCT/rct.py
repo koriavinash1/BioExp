@@ -6,6 +6,7 @@ from keras.models import Model
 from keras.utils import np_utils
 from keras.models import load_model
 import matplotlib.pyplot as plt
+import os
 
 import sys
 sys.path.append('..')
@@ -17,7 +18,7 @@ class intervention():
 	def __init__(self, model):
 		self.model = model
 
-	def mean_swap(self, test_path, plot = True):
+	def mean_swap(self, test_path, plot = True, save_path='/home/parth/Interpretable_ML/BioExp/results/RCT'):
 
 		channel = 3
 
@@ -29,7 +30,9 @@ class intervention():
 		corr = np.zeros((n_classes, n_classes))
 		slices = [78]
 
-		for vol in vol_path[0:2]:
+		plt.figure(figsize = (20,20))
+
+		for vol in vol_path:
 			for slicen in slices:
 
 				test_image, gt = load_vol_brats(vol, slicen = slicen, pad = 8)
@@ -39,7 +42,6 @@ class intervention():
 
 				class_dict = {0:'bg', 1:'core', 2:'edema', 3:'enhancing'}
 
-				plt.figure(figsize = (20,20))
 				corr_temp = np.zeros((n_classes, n_classes))
 				for i in range(n_classes):
 					for j in range(n_classes):
@@ -58,10 +60,13 @@ class intervention():
 						
 						corr[i,j] += dice_label_coef(prediction, gt, (j,)) - dice_label_coef(prediction_intervention, gt, (j,))
 						corr_temp[i,j] += dice_label_coef(prediction, gt, (j,)) - dice_label_coef(prediction_intervention, gt, (j,))
-				# print(corr_temp)
 
 		np.set_printoptions(precision = 2, suppress = True)
-		print(corr/(len(vol_path)*len(slices)))
+
+		intervention_importance = corr/(len(vol_path)*len(slices))
+		print(intervention_importance)
+		os.makedirs(save_path, exist_ok = True)
+		np.save(save_path + '/mean_swap_all_images.npy', intervention_importance)
 		if plot == True:
 			plt.show()
 
@@ -78,5 +83,5 @@ if __name__ == "__main__":
 
 	I = intervention(model)
 
-	I.mean_swap('/home/brats/parth/brats_2018/*/**')
+	I.mean_swap('/media/parth/DATA/BraTS_2018/*/**', plot=False)
 
