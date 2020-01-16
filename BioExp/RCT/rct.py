@@ -76,8 +76,7 @@ if __name__ == "__main__":
 
 	model.load_weights('/home/parth/Interpretable_ML/saved_models/densenet/densenet.55_0.522.hdf5')
 
-
 	I = intervention(model)
 
-	I.mean_swap('/home/parth/Interpretable_ML/BioExp/sample_vol/brats/**')
+	I.mean_swap('/home/brats/parth/brats_2018/*/**')
 
