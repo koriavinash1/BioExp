@@ -17,22 +17,22 @@ class intervention():
 	def __init__(self, model):
 		self.model = model
 
-	def mean_swap(self, test_path, plot = False):
+	def mean_swap(self, test_path, plot = True):
 
 		channel = 3
 
 		vol_path = glob(test_path)
-		test_image, gt = load_vol_brats(vol_path[0], slicen = 78, pad = 0)
+		test_image, gt = load_vol_brats(vol_path[0], slicen = 78, pad = 8)
 
 		prediction = np.argmax(self.model.predict(test_image[None, ...]), axis = -1)[0]
 		n_classes = (len(np.unique(prediction)))
 		corr = np.zeros((n_classes, n_classes))
-		slices = list(range(20, 125, 10))
+		slices = [78]
 
-		for vol in vol_path:
+		for vol in vol_path[0:2]:
 			for slicen in slices:
 
-				test_image, gt = load_vol_brats(vol, slicen = slicen, pad = 0)
+				test_image, gt = load_vol_brats(vol, slicen = slicen, pad = 8)
 
 				prediction = np.argmax(self.model.predict(test_image[None, ...]), axis = -1)[0]
 				print("Original Dice Whole:", dice_whole_coef(prediction, gt))
@@ -65,47 +65,16 @@ class intervention():
 		if plot == True:
 			plt.show()
 
-		# print(test_image[gt == 3].shape)
-
-		# new_mean = np.mean(test_image[gt == 3], axis = 0)
-		# print(new_mean)
-
-		# plt.subplot(2, 2, 1)
-		# plt.imshow(test_image[:, :, channel], cmap = plt.cm.RdBu, vmin = -2, vmax = 3)
-		# plt.colorbar()
-		# plt.subplot(2, 2, 3)
-		# plt.imshow(prediction, cmap = plt.cm.RdBu, vmin = 0, vmax = 3)
-		# plt.colorbar()
-		# # plt.show()
-
-		# old_mean = np.mean(test_image[gt == 2], axis = 0)
-		# print(old_mean)
-		# test_image[gt == 2] += (new_mean - old_mean)
-		# print(np.mean(test_image[gt == 2], axis = 0))
-
-		# prediction_intervention = np.argmax(self.model.predict(test_image[None, :, :, channel, None]), axis = -1)[0]
-
-		# plt.subplot(2, 2, 2)
-		# plt.imshow(test_image[:, :, channel], cmap = plt.cm.RdBu, vmin = -2, vmax = 3)
-		# plt.colorbar()
-		# plt.subplot(2, 2, 4)
-		# plt.imshow(prediction_intervention, cmap = plt.cm.RdBu, vmin = 0, vmax = 3)
-		# plt.colorbar()
-		# plt.show()
-
-
-		# print(dice_whole_coef(prediction, gt))
-
 
 if __name__ == "__main__":
 
-	model = load_model('/home/parth/Interpretable_ML/saved_models/U_resnet/ResUnet.h5', 
+	model = load_model('/home/parth/Interpretable_ML/saved_models/densenet/densenet121.h5', 
                 custom_objects={'gen_dice_loss':gen_dice_loss,
                                 'dice_whole_metric':dice_whole_metric,
                                 'dice_core_metric':dice_core_metric,
                                 'dice_en_metric':dice_en_metric})
 
-	model.load_weights('/home/parth/Interpretable_ML/saved_models/U_resnet/ResUnet.40_0.559.hdf5')
+	model.load_weights('/home/parth/Interpretable_ML/saved_models/densenet/densenet.55_0.522.hdf5')
 
 
 	I = intervention(model)
