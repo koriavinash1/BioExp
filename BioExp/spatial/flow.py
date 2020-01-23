@@ -17,7 +17,7 @@ def cam(model, img, gt,
 	nclasses = 2, 
 	save_path = None, 
 	layer_idx = -1, 
-	threshol = 0.5,
+	threshold = 0.5,
 	modifier = 'guided'):
 	"""
 	"""

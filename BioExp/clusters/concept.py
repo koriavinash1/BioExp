@@ -13,6 +13,7 @@ import SimpleITK as sitk
 import pandas as pd
 from ..helpers.utils import *
 from ..spatial.dissection import Dissector
+from ..spatial.flow import cam
 from keras.models import Model
 from skimage.transform import resize as imresize
 from keras.utils import np_utils
@@ -30,11 +31,12 @@ class ConceptIdentification():
         layer_name : intermediate layer name which needs to be analysed
     """
 
-    def __init__(self, model, weights_pth, metric):
+    def __init__(self, model, weights_pth, metric, nclasses=4):
 
         self.model       = model
         self.metric      = metric
         self.weights     = weights_pth
+        self.nclasses    = nclasses
         self.model.load_weights(self.weights, by_name = True)
 
 
@@ -123,13 +125,17 @@ class ConceptIdentification():
 
         return concepts
 
+    def get_layer_idx(self, layer_name):
+        for idx, layer in enumerate(self.model.layers):
+            if layer.name == layer_name:
+                return idx
 
-    def flowidentifier(self, concept_info, 
+    def flow_based_identifier(self, concept_info, 
                             dataset_path, 
                             save_path, 
                             loader,
                             test_img,
-                            img_ROI = None):
+                            test_gt):
         """
             test significance of each concepts
 
@@ -142,18 +148,26 @@ class ConceptIdentification():
         """
         layer_name = concept_info['layer_name']        
         node_idxs = concept_info['filter_idxs']
-        
-        concepts = concepts[:, :, node_idxs]
 
-        print (np.unique(concepts))
-        print ("================")
-        if save_path:
-            nrows = int(len(node_idxs)**.5) + 1
-            self.save_concepts(test_img, concepts, nrows, nrows, concept_info['concept_name'], save_path = save_path)
+        self.model.load_weights(self.weights, by_name = True)
+        node_idx  = self.get_layer_idx(concept_info['layer_name'])
+        total_filters = np.arange(np.array(self.model.layers[node_idx].get_weights())[0].shape[-1])
+        test_filters  = np.delete(total_filters, node_idxs)
 
-        # some statistics on concepts
-        mean_concept = np.round(np.mean(concepts, axis=2)[:,:,None])
-        self.save_concepts(test_img, mean_concept, 1, 1, concept_info['concept_name']+'mean', save_path = save_path)
+        layer_weights = np.array(self.model.layers[node_idx].get_weights())
+        occluded_weights = layer_weights.copy()
+        for j in test_filters:
+            occluded_weights[0][:,:,:,j] = 0
+            occluded_weights[1][j] = 0
+        self.model.layers[node_idx].set_weights(occluded_weights)
 
-        return concepts
+        dice = cam(self.model, test_img, test_gt, 
+                        nclasses = self.nclasses, 
+                        save_path = save_path, 
+                        layer_idx = -1, 
+                        threshold = 0.5,
+                        modifier = 'guided')
+        print ("[BioExp:INFO Mean Layer Dice:] ", dice)
+
+        return dice
 
