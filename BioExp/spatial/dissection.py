@@ -124,7 +124,7 @@ class Dissector():
 
                     concept = np.ma.masked_where(concept == 0, concept)
                     ax = plt.subplot(gs[i, j])
-                    im = ax.imshow(img[:,:,3], cmap='gray')
+                    im = ax.imshow(np.squeeze(img), cmap='gray')
                     im = ax.imshow(concept, alpha=0.5)
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])

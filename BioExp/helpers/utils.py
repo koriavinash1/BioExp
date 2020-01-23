@@ -35,6 +35,7 @@ def _normalize(slice):
     else:
         tmp= (slice - np.mean(image_nonzero)) / np.std(image_nonzero)
         # tmp[tmp==tmp.min()]=-9
+        # tmp = (tmp - np.min(tmp)/(np.max(tmp) - np.min(tmp)))
         return tmp
 
 def load_vol_brats( rootpath, 
@@ -68,8 +69,9 @@ def load_vol_brats( rootpath,
     test_image = np.transpose(test_image,(0,2,3,1))
 
     if pad:
-        npad = ((pad, pad), (pad, pad), (0, 0), (0, 0))
-        test_image = np.pad(test_image, pad_width=npad, mode='constant', constant_values=0)
+        npad = ((0,0), (pad, pad), (pad, pad), (0, 0))
+
+        test_image = np.pad(test_image, pad_width=npad, mode='constant', constant_values=test_image.min())
 
     if not slicen == -1:
         test_image = np.array(test_image[slicen])
@@ -80,11 +82,12 @@ def load_vol_brats( rootpath,
         gt[gt == 4] = 3
 
         if pad:
-            npad  = ((pad, pad), (pad, pad), (0, 0))
+            npad  = ((0,0), (pad, pad), (pad, pad))
             gt    = np.pad(gt, pad_width=npad, mode='constant', constant_values=0)
         if not slicen == -1:
             gt  = np.array(gt[slicen])
         return test_image, gt
+
 
     except:
         return test_image

@@ -128,7 +128,8 @@ class Cluster():
 
 		shape = layer_weights[0].shape
 		X = layer_weights[0].reshape(layer_weights[0].shape[-1], -1)
-
+		position = np.linspace(0, X.shape[-1], X.shape[-1])
+		X = X + position[None, :]
 		model = AgglomerativeClustering().fit(X)
 		
 		# plot the top three levels of the dendrogram
