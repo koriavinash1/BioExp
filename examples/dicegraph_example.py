@@ -26,7 +26,7 @@ set_session(tf.Session(config=config))
 
 	
 parser = argparse.ArgumentParser(description='feature study')
-parser.add_argument('--seq', default='flair', type=str, help='mri sequence')
+parser.add_argument('--seq', default='t1c', type=str, help='mri sequence')
 parser = parser.parse_args()
 
 
@@ -39,7 +39,7 @@ weights_path      = '../../saved_models/model_{}/model-wts-{}.hdf5'.format(seq, 
 
 
 metric = dice_label_coef
-layer_names = [ 'conv2d_6', 'conv2d_12', 'conv2d_18']
+layer_names = [ 'conv2d_1', 'conv2d_3', 'conv2d_5', 'conv2d_7','conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_15', 'conv2d_17', 'conv2d_19', 'conv2d_21']
 
 
 model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
@@ -63,18 +63,18 @@ infoclasses['ET'] = (3,)
 infoclasses['CT'] = (1,3,)
 
 G = delta.DeltaGraph(model, weights_path, metric, layer_names, classinfo = infoclasses)
-json = G.get_concepts('./dice')
+json = G.get_concepts('./dicegraph_results')
 print (json)
 
 # generate graph adj matrix
-AM = G.generate_graph(json, dataset_path = data_root_path, loader = dataloader(), save_path = './dice')
+AM = G.generate_graph(json, dataset_path = data_root_path, loader = dataloader(), save_path = './dicegraph_results')
 
 for class_ in infoclasses.keys():
 	print(np.array(AM[class_]).shape)
 	plt.clf()
 	plt.imshow(AM[class_], cmap = plt.cm.RdBu, vmin = 0, vmax = 1)
 	plt.colorbar()
-	plt.savefig('./dice/' + class_+'.png')
-significance = G.node_significance(json, dataset_path = data_root_path, loader = dataloader(), save_path = './dice')
+	plt.savefig('./dicegraph_results/' + class_+'.png')
+significance = G.node_significance(json, dataset_path = data_root_path, loader = dataloader(), save_path = './dicegraph_results')
 pprint(significance)
 	

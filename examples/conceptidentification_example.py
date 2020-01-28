@@ -20,7 +20,7 @@ set_session(tf.Session())
 
 	
 parser = argparse.ArgumentParser(description='feature study')
-parser.add_argument('--seq', default='flair', type=str, help='mri sequence')
+parser.add_argument('--seq', default='t1c', type=str, help='mri sequence')
 parser = parser.parse_args()
 
 
@@ -53,7 +53,7 @@ infoclasses['whole'] = (1,2,3)
 infoclasses['ET'] = (3,)
 infoclasses['CT'] = (1,3)
 metric = dice_label_coef
-layer_names = [ 'conv2d_6', 'conv2d_12', 'conv2d_18']
+layer_names = ['conv2d_1', 'conv2d_3', 'conv2d_5', 'conv2d_7','conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_15', 'conv2d_17', 'conv2d_19', 'conv2d_21']
 
 image, gt = utils.load_vol_brats('../sample_vol/brats/Brats18_CBICA_AOP_1', slicen=105)
 image = image[:, :, seq_map[seq]][:,:, None]
@@ -66,10 +66,8 @@ clusters_info = G.get_concepts('.')
 
 for i in range(len(clusters_info['concept_name'])):
 	concept_info = {'concept_name': clusters_info['concept_name'][i], 'layer_name': clusters_info['layer_name'][i], 'filter_idxs': clusters_info['feature_map_idxs'][i]}
-	identifier.identify(concept_info, 
-				    data_root_path, 
-		                    save_path = 'cluster_info', 
-		                    loader = dataloader(),
+	identifier.flow_based_identifier(concept_info, 
+		                    save_path = 'cluster_info_results', 
 		                    test_img = image,
-		                    img_ROI = ROI)
+		                    test_gt = gt)
 

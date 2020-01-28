@@ -13,7 +13,7 @@ import SimpleITK as sitk
 import pandas as pd
 from ..helpers.utils import *
 from ..spatial.dissection import Dissector
-from ..spatial.flow import cam
+from ..spatial.flow import singlelayercam
 from keras.models import Model
 from skimage.transform import resize as imresize
 from keras.utils import np_utils
@@ -131,9 +131,7 @@ class ConceptIdentification():
                 return idx
 
     def flow_based_identifier(self, concept_info, 
-                            dataset_path, 
                             save_path, 
-                            loader,
                             test_img,
                             test_gt):
         """
@@ -161,12 +159,12 @@ class ConceptIdentification():
             occluded_weights[1][j] = 0
         self.model.layers[node_idx].set_weights(occluded_weights)
 
-        dice = cam(self.model, test_img, test_gt, 
+        dice = singlelayercam(self.model, test_img, test_gt, 
                         nclasses = self.nclasses, 
                         save_path = save_path, 
-                        layer_idx = -1, 
-                        threshold = 0.5,
-                        modifier = 'guided')
+                        name  = concept_info['concept_name'], 
+                        layer_idx = node_idx, 
+                        threshold = 0.5)
         print ("[BioExp:INFO Mean Layer Dice:] ", dice)
 
         return dice
