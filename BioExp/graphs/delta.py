@@ -111,9 +111,11 @@ class DeltaGraph():
 			self.modelcopy.load_weights(self.weights, by_name = True)
 			layer_weights = np.array(self.modelcopy.layers[node_idx].get_weights())
 			occluded_weights = layer_weights.copy()
+
 			for j in test_filters[:nfilters]:
 				occluded_weights[0][:,:,:,j] = 0
 				occluded_weights[1][j] = 0
+
 			self.modelcopy.layers[node_idx].set_weights(occluded_weights)
 			for i in range(len(input_paths) if len(input_paths) < max_samples else max_samples):
 				input_, label_ = loader(os.path.join(dataset_path, input_paths[i]), 
@@ -170,6 +172,7 @@ class DeltaGraph():
 
 		layer_weights = np.array(self.modelcopy.layers[nodeB_idx].get_weights())
 		occluded_weights = layer_weights.copy()
+
 		for j in nodeB_idxs:
 			occluded_weights[0][:,:,:,j] = 0
 			occluded_weights[1][j] = 0
@@ -187,10 +190,22 @@ class DeltaGraph():
 			prediction_occluded = np.squeeze(self.modelcopy.predict(input_[None, ...]))
 			prediction = np.squeeze(self.model.predict(input_[None, ...]))
 
+			idx = 0
+			if self.noutputs > 1:
+				for ii in range(self.noutputs):
+					if prediction[ii] == self.nclasses:
+						idx = ii 
+						break;
+
+
 			for class_ in self.classinfo.keys():
-				dice_json[class_].append(self.metric(label_, prediction.argmax(axis = -1), self.classinfo[class_]) - 
+				if self.noutputs > 1:
+					dice_json[class_].append(self.metric(label_, prediction[idx].argmax(axis = -1), self.classinfo[class_]) - 
+								self.metric(label_, prediction_occluded[idx].argmax(axis = -1), self.classinfo[class_]))
+				else:
+					dice_json[class_].append(self.metric(label_, prediction.argmax(axis = -1), self.classinfo[class_]) - 
 								self.metric(label_, prediction_occluded.argmax(axis = -1), self.classinfo[class_]))
-			
+
 
 		for class_ in self.classinfo.keys():
 			dice_json[class_] = np.mean(dice_json[class_])
