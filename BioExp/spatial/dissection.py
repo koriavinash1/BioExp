@@ -1,3 +1,7 @@
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 import pdb
 import os
 import cv2 
@@ -9,11 +13,8 @@ import SimpleITK as sitk
 import pandas as pd
 from ..helpers.utils import *
 from keras.models import Model
-import matplotlib.pyplot as plt
 from skimage.transform import resize as imresize
 from keras.utils import np_utils
-import matplotlib
-matplotlib.use('Agg')
 
 import matplotlib.gridspec as gridspec
 from scipy.ndimage.measurements import label
@@ -24,8 +25,8 @@ class Dissector():
     """
         Network Dissection analysis
 
-        model: keras model initialized with trained weights
-        layer_name: intermediate layer name which needs to be analysed
+        model      : keras model initialized with trained weights
+        layer_name : intermediate layer name which needs to be analysed
     """
 
     def __init__(self, model, layer_name, seq=None):
@@ -44,8 +45,8 @@ class Dissector():
         """
             connected component analysis with appropreate threshold
 
-            img: test_image for thresholding
-            threshold: area threshold for selecting max area 
+            img       : test_image for thresholding
+            threshold : area threshold for selecting max area 
                     components
         """
 
@@ -69,10 +70,10 @@ class Dissector():
             Estimates threshold maps for given percentile value
 
             dataset_path: input dataset path
-            save_path: path to save feature maps
-                        if fmaps exists already it directly loads
-            percentile: value used for thresholding obtained feature maps
-                        range: (0, 100)
+            save_path   : path to save feature maps
+                          if fmaps exists already it directly loads
+            percentile  : value used for thresholding obtained feature maps
+                          range: (0, 100)
         """
         if os.path.exists(os.path.join(save_path, 'ModelDissection_layer_fmaps_{}.npy'.format(self.layer_name))):
             fmaps = np.load(os.path.join(save_path, 'ModelDissection_layer_fmaps_{}.npy'.format(self.layer_name))) 
@@ -123,7 +124,7 @@ class Dissector():
 
                     concept = np.ma.masked_where(concept == 0, concept)
                     ax = plt.subplot(gs[i, j])
-                    im = ax.imshow(img[:,:,3], cmap='gray')
+                    im = ax.imshow(np.squeeze(img), cmap='gray')
                     im = ax.imshow(concept, alpha=0.5)
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
@@ -186,11 +187,12 @@ class Dissector():
             except: pass
             resized_masks[:,:,i] = eroded_img
 
-        ncols = int(np.ceil(nfeatures**0.5))
-        nrows = int(np.ceil(nfeatures**0.5))
 
-
-        self._save_features(image, resized_masks, nrows, ncols, save_path)
+        if save_path:
+            ncols = int(np.ceil(nfeatures**0.5))
+            nrows = int(np.ceil(nfeatures**0.5))
+            self._save_features(image, resized_masks, nrows, ncols, save_path)
+            
         return resized_masks
 
 
@@ -206,15 +208,15 @@ class Dissector():
             Quatify the learnt internal concepts by a network, 
             only valid for segmentation networks 
 
-            image : image (H x W x C)
-            gt    : image (H x W)
+            image     : image (H x W x C)
+            gt        : image (H x W)
             threshold_maps : threshold maps used for dissection 
-            nclasses : number of classes
+            nclasses  : number of classes
             nfeatures : number of feature maps to consider
             save_path : path to save csv with score for each featurs
             save_fmaps: saves images with fmap overlap
             post_process_threshold: threshold for postprocessing cc analysis
-            ROI : region of interest mask in a given image
+            ROI       : region of interest mask in a given image
         """
 
         fmaps = np.squeeze(self.model.predict(image[None, ...]))

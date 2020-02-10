@@ -9,9 +9,9 @@ from scipy.cluster.hierarchy import dendrogram
 from sklearn.cluster import AgglomerativeClustering
 
 
-class cluster():
+class Cluster():
 	"""
-	A class for conducting an ablation study on a trained keras model instance
+	A class for conducting an cluster study on a trained keras model instance
 
 	"""     
 
@@ -60,6 +60,7 @@ class cluster():
 				c2Dist = distCache[childs[1]]
 				c2W = weightCache[childs[1]]
 			d = np.linalg.norm(c1-c2)
+			# d = np.squeeze(np.dot(c1.T, c2)/ (np.linalg.norm(c1)*np.linalg.norm(c2)))
 			cc = ((c1W*c1)+(c2W*c2))/(c1W+c2W)
 
 			X = np.vstack((X,cc.T))
@@ -72,6 +73,8 @@ class cluster():
 				dNew = (d**2 + added_dist**2)**0.5
 			elif mode == 'max':  # If the previrous clusters had higher distance, use that one
 				dNew = max(d,c1Dist,c2Dist)
+			elif mode == 'cosine':
+				dNew = np.squeeze(np.dot(c1Dist, c2Dist)/ (np.linalg.norm(c1Dist)*np.linalg.norm(c2Dist)))
 			elif mode == 'actual':  # Plot the actual distance.
 				dNew = d
 
@@ -125,7 +128,8 @@ class cluster():
 
 		shape = layer_weights[0].shape
 		X = layer_weights[0].reshape(layer_weights[0].shape[-1], -1)
-
+		position = np.linspace(0, X.shape[-1], X.shape[-1])
+		X = X + position[None, :]
 		model = AgglomerativeClustering().fit(X)
 		
 		# plot the top three levels of the dendrogram

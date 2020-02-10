@@ -41,7 +41,7 @@ for img, gt in zip(imgs, gts):
 				nclasses = nclasses, 
 				save_path = save_path, 
 				layer_idx = -1, 
-				threshol = 0.5,
+				threshold = 0.5,
 				modifier = 'guided')
 	print ("[BioExp:INFO Mean Layer Dice:] ", dice) 
 	dices.append(dice)
