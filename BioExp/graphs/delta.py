@@ -48,7 +48,7 @@ class DeltaGraph():
 		self.layers     = layer_names
 		self.metric     = metric
 		self.classinfo  = classinfo
-
+		self.noutputs   = len(self.model.outputs)
 
 	def get_layer_idx(self, layer_name):
 		for idx, layer in enumerate(self.model.layers):
@@ -117,12 +117,24 @@ class DeltaGraph():
 			self.modelcopy.layers[node_idx].set_weights(occluded_weights)
 			for i in range(len(input_paths) if len(input_paths) < max_samples else max_samples):
 				input_, label_ = loader(os.path.join(dataset_path, input_paths[i]), 
-										os.path.join(dataset_path, 
-													input_paths[i]).replace('mask', 'label').replace('labels', 'masks'))
+									os.path.join(dataset_path, 
+									input_paths[i]).replace('mask', 'label').replace('labels', 'masks'))
 				prediction_occluded = np.squeeze(self.modelcopy.predict(input_[None, ...]))
 				prediction = np.squeeze(self.model.predict(input_[None, ...]))
+				
+				idx = 0
+				if self.noutputs > 1:
+					for ii in range(self.noutputs):
+						if prediction[ii] == self.nclasses:
+							idx = ii 
+							break;
+
 				for class_ in self.classinfo.keys():
-					dice_json[class_].append(self.metric(label_, prediction.argmax(axis = -1), self.classinfo[class_]) - 
+					if self.noutputs > 1:
+						dice_json[class_].append(self.metric(label_, prediction[idx].argmax(axis = -1), self.classinfo[class_]) - 
+									self.metric(label_, prediction_occluded[idx].argmax(axis = -1), self.classinfo[class_]))
+					else:
+						dice_json[class_].append(self.metric(label_, prediction.argmax(axis = -1), self.classinfo[class_]) - 
 									self.metric(label_, prediction_occluded.argmax(axis = -1), self.classinfo[class_]))
 
 		for class_ in self.classinfo.keys():
@@ -170,10 +182,11 @@ class DeltaGraph():
 		input_paths = os.listdir(dataset_path)
 		for i in range(len(input_paths) if len(input_paths) < max_samples else max_samples):
 			input_, label_ = loader(os.path.join(dataset_path, input_paths[i]), 
-									os.path.join(dataset_path, 
-												input_paths[i]).replace('mask', 'label').replace('labels', 'masks'))
+								os.path.join(dataset_path, 
+								input_paths[i]).replace('mask', 'label').replace('labels', 'masks'))
 			prediction_occluded = np.squeeze(self.modelcopy.predict(input_[None, ...]))
 			prediction = np.squeeze(self.model.predict(input_[None, ...]))
+
 			for class_ in self.classinfo.keys():
 				dice_json[class_].append(self.metric(label_, prediction.argmax(axis = -1), self.classinfo[class_]) - 
 								self.metric(label_, prediction_occluded.argmax(axis = -1), self.classinfo[class_]))
