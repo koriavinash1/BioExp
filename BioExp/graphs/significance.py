@@ -20,7 +20,7 @@ class SignificanceTester():
 	A class for testing significance of each concepts generated in a trained keras model instance
 	"""     
 
-	def __init__(self, model, weights_pth, metric max_clusters = None, classinfo=None):
+	def __init__(self, model, weights_pth, metric, classinfo=None):
 		
 		"""
 			model       : keras model architecture (keras.models.Model)
@@ -45,7 +45,7 @@ class SignificanceTester():
 
 				return idx
 
-	def nodeSignificance(self, concept_info, dataset_path, loader, nmontecarlo = 10, max_samples = 1):
+	def node_significance(self, concept_info, dataset_path, loader, nmontecarlo = 10, max_samples = 1):
 		"""
 			test significance of each concepts
 			concept: {'layer_name', 'filter_idxs'}
@@ -105,7 +105,7 @@ class SignificanceTester():
 
 		return dice_json 
 
-	def graphSignificance(self, graph_info, dataset_path = None, loader = None, save_path=None, max_samples = 1, nmontecarlo = 10):
+	def graph_significance(self, graph_info, dataset_path = None, loader = None, save_path=None, max_samples = 1, nmontecarlo = 10):
 		"""
 			generates graph adj matrix for computation
 			graph_info: {'concept_name', 'layer_name', 'feature_map_idxs'}
