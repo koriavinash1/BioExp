@@ -17,6 +17,9 @@ from ..spatial.flow import singlelayercam
 from keras.models import Model
 from skimage.transform import resize as imresize
 from keras.utils import np_utils
+from keras import layers
+from keras.models import Sequential
+import keras.backend as tf
 
 import matplotlib.gridspec as gridspec
 from scipy.ndimage.measurements import label
@@ -157,13 +160,30 @@ class ConceptIdentification():
         for j in test_filters:
             occluded_weights[0][:,:,:,j] = 0
             occluded_weights[1][j] = 0
-        self.model.layers[node_idx].set_weights(occluded_weights)
+		
+        """
+        for j in node_idxs:
+            occluded_weights[0][:,:,:,j] = 1.
+            occluded_weights[1][j] = 1.
+        """
 
-        dice = singlelayercam(self.model, test_img, test_gt, 
-                        nclasses = self.nclasses, 
+        self.model.layers[node_idx].set_weights(occluded_weights)
+        model = Model(inputs = self.model.input, outputs=self.model.get_layer(concept_info['layer_name']).output)
+  
+        newmodel = Sequential()
+        newmodel.add(model)
+        newmodel.add(layers.Conv2D(1,1))
+        
+        # for ii in range(len(self.model.layers)):
+        #    newmodel.layers[ii].set_weights(self.model.layers[ii].get_weights())
+        newmodel.layers[-1].set_weights((np.ones((1, 1, len(total_filters), 1)), np.ones(1)))
+
+        dice = singlelayercam(newmodel, test_img, test_gt, 
+                        nclasses = 1, 
                         save_path = save_path, 
                         name  = concept_info['concept_name'], 
-                        layer_idx = node_idx, 
+                        st_layer_idx = -1, 
+                        end_layer_idx = 1,
                         threshold = 0.5)
         print ("[BioExp:INFO Mean Layer Dice:] ", dice)
 

@@ -17,43 +17,43 @@ def singlelayercam(model, img, gt,
 		nclasses = 2,
 		save_path = None,
 		name = None,
-		layer_idx = 3,
-		threshold = 0.5):
+		end_layer_idx = 3,
+		st_layer_idx = -1,
+		threshold = 0.5,
+		modifier='guided'):
 	"""
 	"""
-	model.layers[-1].activation = activations.linear
+	# model.layers[-1].activation = activations.linear
 	# model = utils.apply_modifications(model)
 	# print(model.summary())
 	
 	layer_dice = np.zeros((1, nclasses))
 	if save_path:
-		plt.figure(figsize=(30, 10))
+		plt.figure(figsize=(10*nclasses, 10))
 		gs = gridspec.GridSpec(1, nclasses)
 		gs.update(wspace=0.025, hspace=0.05)
 
-	for class_ in range(nclasses):
-		grads_ = visualize_cam(model, -1, filter_indices=class_, penultimate_layer_idx = layer_idx,  
-					seed_input = img[None, ...])
+	for i  in range(nclasses):
+		grads_ = visualize_cam(model, st_layer_idx, filter_indices=i, penultimate_layer_idx = end_layer_idx,  
+					seed_input = img[None, ...], backprop_modifier = modifier)
 		if save_path:
-			ax = plt.subplot(gs[class_])
-			im = ax.imshow(grads_, cmap=plt.cm.RdBu)
+			ax = plt.subplot(gs[i])
+			im = ax.imshow(grads_, cmap=plt.get_cmap('hot'), vmin=0, vmax=1)
 			ax.set_xticklabels([])
 			ax.set_yticklabels([])
 			ax.set_aspect('equal')
 			ax.tick_params(bottom='off', top='off', labelbottom='off' )
-			if class_ == nclasses:
-				divider = make_axes_locatable(ax)
-				cax = divider.append_axes("right", size="5%", pad=0.2)
-				cb = plt.colorbar(im, ax=ax, cax=cax )
-
 
 		thresh_image = grads_ > threshold
-		gt_mask = gt == class_
+		gt_mask = gt == i
 		score = (np.sum(thresh_image*gt_mask))*2.0/(np.sum(gt_mask*1. + thresh_image*1.) + 1.e-3)
-		layer_dice[0][class_ -1] += score
-		if save_path:
-			os.makedirs(save_path, exist_ok = True)
-			plt.savefig(os.path.join(save_path, name +'.png'), bbox_inches='tight')
+		layer_dice[0][i] += score
+	divider = make_axes_locatable(ax)
+	cax = divider.append_axes("right", size="5%", pad=0.2)
+	cb = plt.colorbar(im, ax=ax, cax=cax )
+	if save_path:
+		os.makedirs(save_path, exist_ok = True)
+		plt.savefig(os.path.join(save_path, name +'.png'), bbox_inches='tight')
 	return layer_dice
 
 

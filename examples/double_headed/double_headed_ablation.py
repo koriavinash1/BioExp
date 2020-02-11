@@ -1,5 +1,5 @@
 import sys
-sys.path.append('..')
+sys.path.append('../../')
 import argparse
 import keras
 import numpy as np
@@ -20,14 +20,14 @@ config = tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.3
 set_session(tf.Session(config=config))
 
-model_path        = '../trained_models/double_headed/flair_ae_no_skip.hdf5'
-weights_path      = '../trained_models/double_headed/flair_ae_no_skip_weights.hdf5'
+model_path        = '../../trained_models/double_headed/flair_ae_no_skip.hdf5'
+weights_path      = '../../trained_models/double_headed/flair_ae_no_skip_weights.hdf5'
 
 results_root_path = './results/'
 data_root_path = '/home/brats/parth/test-data/HGG/'
 
 
-layers_to_consider = ['conv2d_2', 'conv2d_3', 'conv2d_4']
+layers_to_consider = ['conv2d_2', 'conv2d_3', 'conv2d_4', 'conv2d_5', 'conv2d_6']
 input_name = 'input_1'
 
 infoclasses = {}
@@ -35,7 +35,7 @@ for i in range(4): infoclasses['class_'+str(i)] = (i,)
 infoclasses['whole'] = (1,2,3,)
 infoclasses['ET'] = (3,)
 infoclasses['CT'] = (1,3,)
-num_images = 2
+num_images = 5
 
 model = load_model(model_path, compile=False, custom_objects={'gen_dice_loss':gen_dice_loss,
 	                                'dice_whole_metric':dice_whole_metric,
