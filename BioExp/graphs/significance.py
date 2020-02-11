@@ -66,6 +66,8 @@ class SignificanceTester():
 		dice_json = {}
 		for class_ in self.classinfo.keys():
 			dice_json[class_] = []
+		dice_json['IG'] = [] # information gain
+
 
 		for _ in range(nmontecarlo):
 			np.random.shuffle(test_filters)
@@ -99,10 +101,16 @@ class SignificanceTester():
 					else:
 						dice_json[class_].append(self.metric(label_, prediction.argmax(axis = -1), self.classinfo[class_]) - 
 									self.metric(label_, prediction_occluded.argmax(axis = -1), self.classinfo[class_]))
+				if self.noutputs > 1:
+					dice_json['IG'].append(np.mean(-prediction_occluded[idx]*np.log2(prediction_occluded[idx]) + prediction[idx]*np.log(prediction[idx])))
+				else:
+					dice_json['IG'].append(np.mean(-prediction_occluded*np.log2(prediction_occluded) + prediction*np.log(prediction))) 
+
 
 		for class_ in self.classinfo.keys():
 			dice_json[class_] = np.mean(dice_json[class_])
-
+		
+		dice_json['IG'] = np.mean(dice_json['IG'])
 		return dice_json 
 
 	def graph_significance(self, graph_info, dataset_path = None, loader = None, save_path=None, max_samples = 1, nmontecarlo = 10):

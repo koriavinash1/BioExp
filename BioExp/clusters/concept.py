@@ -155,11 +155,13 @@ class ConceptIdentification():
         total_filters = np.arange(np.array(self.model.layers[node_idx].get_weights())[0].shape[-1])
         test_filters  = np.delete(total_filters, node_idxs)
 
-        layer_weights = np.array(self.model.layers[node_idx].get_weights())
+        layer_weights = np.array(self.model.layers[node_idx].get_weights().copy())
         occluded_weights = layer_weights.copy()
         for j in test_filters:
             occluded_weights[0][:,:,:,j] = 0
-            occluded_weights[1][j] = 0
+            try:
+                occluded_weights[1][j] = 0
+            except: pass
 		
         """
         for j in node_idxs:
@@ -178,14 +180,14 @@ class ConceptIdentification():
         #    newmodel.layers[ii].set_weights(self.model.layers[ii].get_weights())
         newmodel.layers[-1].set_weights((np.ones((1, 1, len(total_filters), 1)), np.ones(1)))
 
-        dice = singlelayercam(newmodel, test_img, test_gt, 
+        dice, information = singlelayercam(newmodel, test_img, test_gt, 
                         nclasses = 1, 
                         save_path = save_path, 
                         name  = concept_info['concept_name'], 
                         st_layer_idx = -1, 
                         end_layer_idx = 1,
                         threshold = 0.5)
-        print ("[BioExp:INFO Mean Layer Dice:] ", dice)
+        print ("[BioExp:INFO Mean Layer Dice:] ", dice, information)
 
         return dice
 

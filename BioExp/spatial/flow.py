@@ -28,6 +28,7 @@ def singlelayercam(model, img, gt,
 	# print(model.summary())
 	
 	layer_dice = np.zeros((1, nclasses))
+	layer_info = np.zeros((1, nclasses))
 	if save_path:
 		plt.figure(figsize=(10*nclasses, 10))
 		gs = gridspec.GridSpec(1, nclasses)
@@ -48,13 +49,14 @@ def singlelayercam(model, img, gt,
 		gt_mask = gt == i
 		score = (np.sum(thresh_image*gt_mask))*2.0/(np.sum(gt_mask*1. + thresh_image*1.) + 1.e-3)
 		layer_dice[0][i] += score
+		layer_info[0][i] += -np.sum(grads_*np.log2(grads_))
 	divider = make_axes_locatable(ax)
 	cax = divider.append_axes("right", size="5%", pad=0.2)
 	cb = plt.colorbar(im, ax=ax, cax=cax )
 	if save_path:
 		os.makedirs(save_path, exist_ok = True)
 		plt.savefig(os.path.join(save_path, name +'.png'), bbox_inches='tight')
-	return layer_dice
+	return layer_dice, layer_info
 
 
 def cam(model, img, gt, 

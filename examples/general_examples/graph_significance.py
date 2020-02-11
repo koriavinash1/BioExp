@@ -39,7 +39,7 @@ weights_path      = '/home/brats/parth/saved_models/model_{}/model-wts-{}.hdf5'.
 
 
 metric = dice_label_coef
-layer_names = ['conv2d_1', 'conv2d_3', 'conv2d_5', 'conv2d_7','conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_15', 'conv2d_17', 'conv2d_19', 'conv2d_21']
+layer_names = ['conv2d_1', 'conv2d_3', 'conv2d_5']#, 'conv2d_7','conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_15', 'conv2d_17', 'conv2d_19', 'conv2d_21']
 
 
 model = load_model(model_path, custom_objects={'gen_dice_loss':gen_dice_loss,
@@ -68,5 +68,5 @@ G = delta.DeltaGraph(model, weights_path, metric, layer_names, classinfo = infoc
 json = G.get_concepts('./dicegraph_results')
 
 tester = significance.SignificanceTester(model, weights_path, metric, infoclasses)
-tester.graph_significance(json, data_root_path, dataloader(), './dicegraph_results', max_samples = 5, nmontecarlo = 10)
-pprint(significance)
+sig = tester.graph_significance(json, data_root_path, dataloader(), './dicegraph_results', max_samples = 1, nmontecarlo = 1)
+pprint(sig)
