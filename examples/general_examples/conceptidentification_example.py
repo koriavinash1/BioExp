@@ -52,7 +52,7 @@ infoclasses['whole'] = (1,2,3)
 infoclasses['ET'] = (3,)
 infoclasses['CT'] = (1,3)
 metric = dice_label_coef
-layer_names = ['conv2d_1', 'conv2d_3', 'conv2d_5', 'conv2d_7','conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_15', 'conv2d_17', 'conv2d_19', 'conv2d_21']
+layer_names = ['conv2d_2'] #, 'conv2d_5', 'conv2d_7','conv2d_9', 'conv2d_11', 'conv2d_13', 'conv2d_15', 'conv2d_17', 'conv2d_19', 'conv2d_21']
 
 image, gt = utils.load_vol_brats('../../sample_vol/brats/Brats18_CBICA_AOP_1', slicen=105)
 image = image[:, :, seq_map[seq]][:,:, None]
@@ -65,8 +65,9 @@ clusters_info = G.get_concepts('.')
 
 for i in range(len(clusters_info['concept_name'])):
 	concept_info = {'concept_name': clusters_info['concept_name'][i], 'layer_name': clusters_info['layer_name'][i], 'filter_idxs': clusters_info['feature_map_idxs'][i]}
-	identifier.flow_based_identifier(concept_info, 
-		                    save_path = 'cluster_info_results', 
+	identifier.check_robustness(concept_info, 
+		                    save_path = 'cluster_robustness_results', 
 		                    test_img = image,
-		                    test_gt = gt)
+		                    test_gt = gt,
+				    save_all = True)
 
