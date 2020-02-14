@@ -180,7 +180,7 @@ class ConceptIdentification():
         #    newmodel.layers[ii].set_weights(self.model.layers[ii].get_weights())
         newmodel.layers[-1].set_weights((np.ones((1, 1, len(total_filters), 1)), np.ones(1)))
 
-        dice, information = singlelayercam(newmodel, test_img, test_gt, 
+        dice, information, grad = singlelayercam(newmodel, test_img, test_gt, 
                         nclasses = 1, 
                         save_path = save_path, 
                         name  = concept_info['concept_name'], 
@@ -189,5 +189,158 @@ class ConceptIdentification():
                         threshold = 0.5)
         print ("[BioExp:INFO Mean Layer Dice:] ", dice, information)
 
-        return dice
+        return grad[0]
 
+
+    def _gaussian_sampler_(self, data, ax=-1):
+        return lambda: np.random.normal(loc=np.mean(data, axis=ax), sigma=np.std(data, axis=ax))
+
+
+    def concept_distribution(self, concept_info):
+        """
+            concept_info: {'concept_name', 'layer_name', 'filter_idxs'}
+
+            return: weight_sampler, bias_sampler
+        """
+
+        layer_name = concept_info['layer_name']        
+        node_idxs = concept_info['filter_idxs']
+
+        self.model.load_weights(self.weights, by_name = True)
+        node_idx  = self.get_layer_idx(concept_info['layer_name'])
+
+        layer_weights = np.array(self.model.layers[node_idx].get_weights().copy())
+        concept_weights = layer_weights[0][:,:,:, node_idxs]
+        try:
+            concept_biases  = layer_weights[1][node_idxs]
+            return (self._gaussian_sampler_(concept_weights), self._gaussian_sampler(concept_biases))
+        except:
+            return (self._gaussian_sampler_(concept_weights))
+
+
+    def concept_robustness(self, concept_info,
+                            test_img,
+                            test_gt,
+                            nmontecarlo=3):
+        """
+            test significance of each concepts
+
+            concept: {'concept_name', layer_name', 'filter_idxs'}
+            dataset_path: 
+            save_path:
+            loader:
+            test_imgs:
+            img_ROI:
+        """
+        layer_name = concept_info['layer_name']        
+        node_idxs = concept_info['filter_idxs']
+
+        self.model.load_weights(self.weights, by_name = True)
+        node_idx  = self.get_layer_idx(concept_info['layer_name'])
+        total_filters = np.arange(np.array(self.model.layers[node_idx].get_weights())[0].shape[-1])
+        test_filters  = np.delete(total_filters, node_idxs)
+
+        layer_weights = np.array(self.model.layers[node_idx].get_weights().copy())
+		
+        gradslist = []
+        for _ in range(nmontecarlo):
+            occluded_weights = layer_weights.copy()
+
+            for j in test_filters:
+                occluded_weights[0][:,:,:,j] = 0
+                try:
+                    occluded_weights[1][j] = 0
+                except: pass
+
+            occluded_weights[0][:,:,:,node_idxs] = self._gaussian_sampler_(occluded_weights[0][:,:,:,node_idxs])
+            try:
+                occluded_weights[1][node_idxs] = self._gaussian_sampler_(occluded_weights[1][node_idxs])
+            except: pass
+        
+            self.model.layers[node_idx].set_weights(occluded_weights)
+            model = Model(inputs = self.model.input, outputs=self.model.get_layer(concept_info['layer_name']).output)
+  
+            newmodel = Sequential()
+            newmodel.add(model)
+            newmodel.add(layers.Conv2D(1,1))
+        
+            # for ii in range(len(self.model.layers)):
+            #    newmodel.layers[ii].set_weights(self.model.layers[ii].get_weights())
+            newmodel.layers[-1].set_weights((np.ones((1, 1, len(total_filters), 1)), np.ones(1)))
+
+            dice, information,nclass_grad = singlelayercam(newmodel, test_img, test_gt, 
+                        nclasses = 1, 
+                        name  = concept_info['concept_name'], 
+                        st_layer_idx = -1, 
+                        end_layer_idx = 1,
+                        threshold = 0.5)
+            gradslist.append(nclass_grad[0])
+
+        return np.array(gradlist)
+
+
+    def check_robustness(self, concept_info,
+                            save_path, 
+                            test_img,
+                            test_gt,
+                            save_all = False,
+                            nmontecarlo = 4):
+
+        actual_grad = self.flow_based_identifier(self, cocept_info,
+                                               save_path = None,
+                                               test_img = test_img,
+                                               test_gt = test_gt)
+        montecarlo_grad = self.concept_robustness(self, concept_info
+                                              test_img,
+                                              test_gt,
+                                              nmontecarlo=3)
+
+        if save_path:
+            if save_all:
+                plt.figure(figsize=(10*(nmontecarlo + 1), 10))
+                gs = gridspec.GridSpec(1, nmontecarlo + 1)
+                gs.update(wspace=0.025, hspace=0.05)
+
+                ax = plt.subplot(gs[0])
+                im = ax.imshow(actual_grad, cmap=plt.get_cmap('hot'), vmin=0, vmax=1)
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+                ax.set_aspect('equal')
+                ax.set_title('actual')
+                ax.tick_params(bottom='off', top='off', labelbottom='off' )
+                
+                for ii in range(nmontecarlo):
+                    ax = plt.subplot(gs[ii + 1])
+                    im = ax.imshow(montecarlo_grad[ii], cmap=plt.get_cmap('hot'), vmin=0, vmax=1)
+                    ax.set_xticklabels([])
+                    ax.set_yticklabels([])
+                    ax.set_aspect('equal')
+                    ax.set_title('sampled')
+                    ax.tick_params(bottom='off', top='off', labelbottom='off' )
+
+            elif:
+                plt.figure(figsize=(10*(2), 10))
+                gs = gridspec.GridSpec(1, 2)
+                gs.update(wspace=0.025, hspace=0.05)
+
+                ax = plt.subplot(gs[0])
+                im = ax.imshow(actual_grad, cmap=plt.get_cmap('hot'), vmin=0, vmax=1)
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+                ax.set_aspect('equal')
+                ax.set_title('actual')
+                ax.tick_params(bottom='off', top='off', labelbottom='off' )
+                
+                ax = plt.subplot(gs[1])
+                im = ax.imshow(np.mean(montecarlo_grad, axis=0), cmap=plt.get_cmap('hot'), vmin=0, vmax=1)
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+                ax.set_aspect('equal')
+                ax.set_title('actual')
+                ax.tick_params(bottom='off', top='off', labelbottom='off' )
+
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.2)
+            cb = plt.colorbar(im, ax=ax, cax=cax )
+            os.makedirs(save_path, exist_ok = True)
+            plt.savefig(os.path.join(save_path, name +'.png'), bbox_inches='tight')
