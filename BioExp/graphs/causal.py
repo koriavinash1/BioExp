@@ -47,6 +47,7 @@ class CausalGraph():
 		self.classinfo  = classinfo
 		self.noutputs   = len(self.model.outputs)
 
+
 	def get_layer_idx(self, layer_name):
 		for idx, layer in enumerate(self.model.layers):
 			if layer.name == layer_name:
@@ -65,7 +66,7 @@ class CausalGraph():
 
 		nodeA_idx   = self.get_layer_idx(nodeA_info['layer_name'])
 		nodeA_idxs  = nodeA_info['layer_idxs']
-
+ 2020 wi
 		nodeB_idx   = self.get_layer_idx(nodeB_info['layer_name'])
 		nodeB_idxs  = nodeB_info['layer_idxs']
 
@@ -121,6 +122,16 @@ class CausalGraph():
 
 
 	def generate_graph(self, graph_info):
+		layers   = graph_info['layer_name']
+		concept_names = graph_info['concept_name']
+		filter_idxs   = graph_info['feature_map_idxs']
+
+		layer_names  = np.unique(layers)
+		layer_names = layer_names[np.argsort([int(idx.split('_')[-1]) for idx in layer_names])]
+
+		for layer_name in layer_names:
+			local_concepts = concept_names[layers == layer_name]  
 		pass
 
-	def perform_intervention(self
+	def perform_intervention(self):
+		pass
