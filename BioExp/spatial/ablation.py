@@ -76,7 +76,8 @@ class Ablate():
 			filters_to_ablate = np.arange(0, self.filter_shape[-1], step)
 						
 		#predicts each volume and save the results in np array
-		prediction_unshaped = self.model.predict(self.test_image, batch_size=1, verbose=verbose)
+		prediction_unshaped, og_rec = self.model.predict(self.test_image, batch_size=1, verbose=verbose)
+
 
 		dice_json = {}
 		dice_json['concept'] = []
@@ -91,10 +92,11 @@ class Ablate():
 			occluded_weights[1][j] = 0
 
 		self.model.layers[self.layer_idx].set_weights(occluded_weights)			
-		prediction_unshaped_occluded = self.model.predict(self.test_image,batch_size=1, verbose=0) 
+		prediction_unshaped_occluded, ab_rec = self.model.predict(self.test_image,batch_size=1, verbose=0)
 
 		dice_json['concept'].append('actual_' + str(concept))
 		dice_json['concept'].append('ablated_' + str(concept))
+
 		for class_ in self.classinfo.keys():
 			if self.noutputs == 1:
 				dice_json[class_].append(self.metric(self.gt, prediction_unshaped.argmax(axis = -1), self.classinfo[class_]))
@@ -107,7 +109,6 @@ class Ablate():
 				dice_json[class_].append(self.metric(self.gt, prediction_unshaped_occluded[idx].argmax(axis = -1), self.classinfo[class_]))
 
 		if not (save_path == None):
-			
 			if self.noutputs > 1:
 				plt.subplot(1,2*self.noutputs + 2, 1)
 				# plt.imshow(np.squeeze(self.test_image))
