@@ -73,15 +73,17 @@ class intervention():
 
 if __name__ == "__main__":
 
-	model = load_model('/home/brats/parth/saved_models/densenet/densenet121.h5', 
+	model = load_model('/media/balaji/CamelyonProject/parth/checkpoints/U_resnet/ResUnet.h5', 
                 custom_objects={'gen_dice_loss':gen_dice_loss,
                                 'dice_whole_metric':dice_whole_metric,
                                 'dice_core_metric':dice_core_metric,
                                 'dice_en_metric':dice_en_metric})
 
-	model.load_weights('/home/parth/Interpretable_ML/saved_models/densenet/densenet.55_0.522.hdf5')
+	model.load_weights('/media/balaji/CamelyonProject/parth/checkpoints/U_resnet/ResUnet.40_0.559.hdf5')
+
 
 	I = intervention(model)
 
-	I.mean_swap('/media/parth/DATA/BraTS_2018/*/**', plot=False)
+	I.mean_swap('/media/balaji/CamelyonProject/parth/brats_2018/*/**')
+
 
