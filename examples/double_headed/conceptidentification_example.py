@@ -64,8 +64,9 @@ clusters_info = G.get_concepts('.')
 
 for i in range(len(clusters_info['concept_name'])):
 	concept_info = {'concept_name': clusters_info['concept_name'][i], 'layer_name': clusters_info['layer_name'][i], 'filter_idxs': clusters_info['feature_map_idxs'][i]}
-	identifier.flow_based_identifier(concept_info, 
+	identifier.check_robustness(concept_info, 
 		                    save_path = 'cluster_info_results', 
 		                    test_img = image,
-		                    test_gt = gt)
+		                    test_gt = gt,
+				    save_all = True)
 

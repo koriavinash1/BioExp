@@ -1,6 +1,9 @@
 import matplotlib
 matplotlib.use('Agg')
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import pdb
 import os
@@ -192,8 +195,9 @@ class ConceptIdentification():
         return grad[0]
 
 
-    def _gaussian_sampler_(self, data, ax=-1):
-        return lambda: np.random.normal(loc=np.mean(data, axis=ax), sigma=np.std(data, axis=ax))
+    def _gaussian_sampler_(self, data, size, ax=-1):
+        shape = np.mean(data, ax).shape + (size,)
+        return lambda: np.std(data, -1)[..., None] * np.random.randn(*list(shape)) + np.mean(data, -1)[..., None] # np.random.normal(loc=np.mean(data, axis=ax), scale=np.std(data, axis=ax), size=size)
 
 
     def concept_distribution(self, concept_info):
@@ -213,9 +217,9 @@ class ConceptIdentification():
         concept_weights = layer_weights[0][:,:,:, node_idxs]
         try:
             concept_biases  = layer_weights[1][node_idxs]
-            return (self._gaussian_sampler_(concept_weights), self._gaussian_sampler(concept_biases))
+            return (self._gaussian_sampler_(concept_weights, len(node_idxs)), self._gaussian_sampler(concept_biases, len(node_idxs)))
         except:
-            return (self._gaussian_sampler_(concept_weights))
+            return (self._gaussian_sampler_(concept_weights, len(node_idxs)))
 
 
     def concept_robustness(self, concept_info,
@@ -242,19 +246,27 @@ class ConceptIdentification():
 
         layer_weights = np.array(self.model.layers[node_idx].get_weights().copy())
 		
-        gradslist = []
-        for _ in range(nmontecarlo):
-            occluded_weights = layer_weights.copy()
+        occluded_weights = layer_weights.copy()
 
-            for j in test_filters:
-                occluded_weights[0][:,:,:,j] = 0
-                try:
-                    occluded_weights[1][j] = 0
-                except: pass
-
-            occluded_weights[0][:,:,:,node_idxs] = self._gaussian_sampler_(occluded_weights[0][:,:,:,node_idxs])
+        for j in test_filters:
+            occluded_weights[0][:,:,:,j] = 0
             try:
-                occluded_weights[1][node_idxs] = self._gaussian_sampler_(occluded_weights[1][node_idxs])
+                occluded_weights[1][j] = 0
+            except: pass
+
+        weight_sampler = self._gaussian_sampler_(occluded_weights[0][:,:,:,node_idxs], len(node_idxs)) 
+
+        try:
+            bias_sampler = self._gaussian_sampler_(occluded_weights[1][:,:,:,node_idxs], len(node_idxs))
+        except: pass
+        
+        print (weight_sampler().shape, occluded_weights[0][:,:,:,node_idxs].shape)
+        gradlist = []
+        for _ in range(nmontecarlo):
+
+            occluded_weights[0][:,:,:,node_idxs] = weight_sampler()
+            try:
+                occluded_weights[1][node_idxs] = bias_sampler()
             except: pass
         
             self.model.layers[node_idx].set_weights(occluded_weights)
@@ -274,8 +286,11 @@ class ConceptIdentification():
                         st_layer_idx = -1, 
                         end_layer_idx = 1,
                         threshold = 0.5)
-            gradslist.append(nclass_grad[0])
-
+            gradlist.append(nclass_grad[0])
+	
+        try:
+            del bias_sampler
+        except: pass       
         return np.array(gradlist)
 
 
@@ -286,16 +301,17 @@ class ConceptIdentification():
                             save_all = False,
                             nmontecarlo = 4):
 
-        actual_grad = self.flow_based_identifier(self, cocept_info,
+        actual_grad = self.flow_based_identifier(concept_info,
                                                save_path = None,
                                                test_img = test_img,
                                                test_gt = test_gt)
-        montecarlo_grad = self.concept_robustness(self, concept_info
+        montecarlo_grad = self.concept_robustness(concept_info,
                                               test_img,
                                               test_gt,
-                                              nmontecarlo=3)
+                                              nmontecarlo=nmontecarlo)
 
         if save_path:
+            plt.clf()
             if save_all:
                 plt.figure(figsize=(10*(nmontecarlo + 1), 10))
                 gs = gridspec.GridSpec(1, nmontecarlo + 1)
@@ -316,9 +332,8 @@ class ConceptIdentification():
                     ax.set_yticklabels([])
                     ax.set_aspect('equal')
                     ax.set_title('sampled')
-                    ax.tick_params(bottom='off', top='off', labelbottom='off' )
-
-            elif:
+                    ax.tick_params(bottom='off', top='off', labelbottom='off')
+            else:
                 plt.figure(figsize=(10*(2), 10))
                 gs = gridspec.GridSpec(1, 2)
                 gs.update(wspace=0.025, hspace=0.05)
@@ -343,4 +358,4 @@ class ConceptIdentification():
             cax = divider.append_axes("right", size="5%", pad=0.2)
             cb = plt.colorbar(im, ax=ax, cax=cax )
             os.makedirs(save_path, exist_ok = True)
-            plt.savefig(os.path.join(save_path, name +'.png'), bbox_inches='tight')
+            plt.savefig(os.path.join(save_path, concept_info['concept_name'] +'.png'), bbox_inches='tight')

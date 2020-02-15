@@ -54,10 +54,10 @@ def singlelayercam(model, img, gt,
 		
 		nclass_grad.append(grads_)
 		
-	divider = make_axes_locatable(ax)
-	cax = divider.append_axes("right", size="5%", pad=0.2)
-	cb = plt.colorbar(im, ax=ax, cax=cax )
 	if save_path:
+		divider = make_axes_locatable(ax)
+		cax = divider.append_axes("right", size="5%", pad=0.2)
+		cb = plt.colorbar(im, ax=ax, cax=cax )
 		os.makedirs(save_path, exist_ok = True)
 		plt.savefig(os.path.join(save_path, name +'.png'), bbox_inches='tight')
 	return layer_dice, layer_info, np.array(nclass_grad)
