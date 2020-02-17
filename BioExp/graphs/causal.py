@@ -66,7 +66,6 @@ class CausalGraph():
 
 		nodeA_idx   = self.get_layer_idx(nodeA_info['layer_name'])
 		nodeA_idxs  = nodeA_info['layer_idxs']
- 2020 wi
 		nodeB_idx   = self.get_layer_idx(nodeB_info['layer_name'])
 		nodeB_idxs  = nodeB_info['layer_idxs']
 
