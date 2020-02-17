@@ -175,6 +175,9 @@ feat_extractor = radfeatures.ExtractRadiomicFeatures(image, mask, save_path = pt
 df = feat_extractor.all_features()
 ```
 
+# Causal Inference Pipeline
+![un](./imgs/causal_pipeline.png)
+
 # Contact
 - Avinash Kori (koriavinash1@gmail.com)
 - Parth Natekar (parth@smail.iitm.ac.in)
