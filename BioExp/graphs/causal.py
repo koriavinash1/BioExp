@@ -123,13 +123,32 @@ class CausalGraph():
 	def generate_graph(self, graph_info):
 		layers   = graph_info['layer_name']
 		concept_names = graph_info['concept_name']
+                concept_distribution = graph_info['conecpt_distribution']
 		filter_idxs   = graph_info['feature_map_idxs']
 
 		layer_names  = np.unique(layers)
-		layer_names = layer_names[np.argsort([int(idx.split('_')[-1]) for idx in layer_names])]
+                layer_names  = layer_names[np.argsort([int(idx.split('_')[-1]) for idx in layer_names])]
 
-		for layer_name in layer_names:
-			local_concepts = concept_names[layers == layer_name]  
+                node_ordering = []
+                node_indexing = []
+
+		for i in renage(len(layer_names)):
+			node_ordering.extend(concept_names[layers == layer_names[i])
+                        node_indexing.extend([i]*sum(layers == layer_names[i]))
+                
+                node_indexing = np.array(node_indexing)
+                node_ordering = np.array(node_ordering)
+
+
+                for idxi, nodei in zip(node_indexing, node_ordering):
+                        idistribution = concept_distribution[concept_names == nodei][0]
+                        for iprobability in [0, 1]:
+                                for idxj, nodej in zip(node_indexing[node_indexing >= idxi], node_ordering[node_indexing >= idx]):
+                                        jdistribution = concept_distribution[concept_names == nodej][0]
+                                        for jprobability in [0, 1]:
+                                                ## link formation
+
+
 		pass
 
 	def perform_intervention(self):
