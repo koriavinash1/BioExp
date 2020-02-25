@@ -5,6 +5,7 @@ import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import cv2
+import os
 from keras import activations
 
 from ..helpers.utils import *
@@ -68,6 +69,7 @@ def cam(model, img, gt,
 	save_path = None, 
 	layer_idx = -1, 
 	threshold = 0.5,
+        dice = True,
 	modifier = 'guided'):
 	"""
 	"""
@@ -89,7 +91,7 @@ def cam(model, img, gt,
 
 		for class_ in range(nclasses):
 			grads_ = visualize_cam(model, layer_idx, filter_indices=class_, penultimate_layer_idx = layer,  
-						seed_input = img[None, ...])
+						seed_input = img[None, ...], backprop_modifier = modifier)
 			if save_path:
 				ax = plt.subplot(gs[class_])
 				im = ax.imshow(grads_, cmap=plt.cm.RdBu)
@@ -102,11 +104,11 @@ def cam(model, img, gt,
 					cax = divider.append_axes("right", size="5%", pad=0.2)
 					cb = plt.colorbar(im, ax=ax, cax=cax )
 
-
-			thresh_image = grads_ > threshold
-			gt_mask = gt == class_
-			score = (np.sum(thresh_image*gt_mask))*2.0/(np.sum(gt_mask*1. + thresh_image*1.) + 1.e-3)
-			layer_dice[counter][class_ -1] += score
+			if dice:
+				thresh_image = grads_ > threshold
+				gt_mask = gt == class_
+				score = (np.sum(thresh_image*gt_mask))*2.0/(np.sum(gt_mask*1. + thresh_image*1.) + 1.e-3)
+				layer_dice[counter][class_ -1] += score
 		counter += 1
 
 		if save_path:
