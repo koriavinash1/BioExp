@@ -59,7 +59,7 @@ class CausalGraph():
         def KLDivergence(self, distA, distB):
                 """
                 """
-                kl = 0
+                kl = np.sum(np.where(distA != 0, distA * np.log(distA / distB), 0))
                 return kl
         
 
@@ -116,7 +116,9 @@ class CausalGraph():
 		return self.KLDivergence(np.array(true_distributionB), np.array(predicted_distributionB))
 
 
-	def generate_graph(self, graph_info, dataset_path, dataset_path, dataloader, save_path = None, verbose = False, max_samples=10):
+	def generate_graph(self, graph_info, dataset_path, dataloader, save_path = None, verbose = False, max_samples=10):
+                """
+                """
 		layers   = graph_info['layer_name']
 		concept_names = graph_info['concept_name']
 		filter_idxs   = graph_info['feature_map_idxs']
@@ -133,19 +135,34 @@ class CausalGraph():
                 
                 node_indexing = np.array(node_indexing)
                 node_ordering = np.array(node_ordering)
+                
+                self.causal_graph = np.zeros((len(node_ordering), len(node_ordering)))
+                info = {'idxi': [], 'idxj': [], 'nodei': [], 'nodej': []}
 
-                self.causal_graph = np.zeros((len(node_ordering), len(node_ordering))).astype('int')
                 for ii, (idxi, nodei) in enumerate(zip(node_indexing, node_ordering)):
                         nodei_info = {'concept_name': nodei, 'layer_name': layers[concept_names == nodei], 'feature_map_idxs': filter_idxs[concept_names == nodei]}
                         for jj, (idxj, nodej) in enumerate(zip(node_indexing[node_indexing > idxi], node_ordering[node_indexing > idx])):
-                                nodej_info = {'concept_name': nodej, 'layer_name': layers[concept_names == nodej], 'feature_map_idxs': filter_idxs[concept_names == nodei]}
+                                nodej_info = {'concept_name': nodej, 'layer_name': layers[concept_names == nodej], 'feature_map_idxs': filter_idxs[concept_names == nodej]}
                                 self.causal_graph[ii, jj] = self.get_link(nodei_info,
                                                                             nodej_info,
                                                                             dataset_path = dataset_path,
                                                                             loader = dataloader,
                                                                             max_samples = max_samples)
+                                print("Causal Relation between: {}, {}; edge probability: {}".format(nodei, nodej, self.causal_graph[ii, jj]))
+                                info['nodei'].append(nodei_info)
+                                info['nodej'].append(nodej_info)
+                                info['idxi'].append(ii)
+                                info['idxj'].append(jj)
 
+                os.makedirs(save_path, exist_ok=True)
+                info['graph'] = self.causal_graph
+                pickle.dump(info, open(os.path.join(save_path, 'causal_graph_info.pickle'), 'wb'))
+
+                print("Causal Graph Generated")
 		pass
 
 	def perform_intervention(self):
+                """
+                find all active trails conditioned on output
+                """
 		pass
