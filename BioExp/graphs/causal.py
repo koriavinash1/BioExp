@@ -49,10 +49,19 @@ class CausalGraph():
 
 
 	def get_layer_idx(self, layer_name):
+                """
+                """
 		for idx, layer in enumerate(self.model.layers):
 			if layer.name == layer_name:
 				return idx
 		
+        
+        def KLDivergence(self, distA, distB):
+                """
+                """
+                kl = 0
+                return kl
+        
 
 	def get_link(self, nodeA_info, nodeB_info, dataset_path, loader, max_samples = 1):
 		"""
@@ -68,36 +77,43 @@ class CausalGraph():
 		nodeB_idx   = self.get_layer_idx(nodeB_info['layer_name'])
 		nodeB_idxs  = nodeB_info['layer_idxs']
                 
-                total_filters = np.arange(np.array(self.model.layers[nodeB_idx].get_weights())[0].shape[-1])
-                test_filters  = np.delete(total_filters, nodeB_idxs)
-
-                layer_weights = np.array(self.model.layers[node_idx].get_weights().copy())
+                total_filters = np.arange(np.array(self.model.layers[nodeA_idx].get_weights())[0].shape[-1])
+                test_filters  = np.delete(total_filters, nodeA_idxs)
+                layer_weights = np.array(self.model.layers[nodeA_idx].get_weights().copy())
                 occluded_weights = layer_weights.copy()
                 for j in test_filters:
                         occluded_weights[0][:,:,:,j] = 0
-                        try:
-                                occluded_weights[1][j] = 0
+                        try: occluded_weights[1][j] = 0
                         except: pass
+                self.model.layers[nodeA_idx].set_weights(occluded_weights)
+                modelT = Model(inputs = self.model.input, outputs=self.model.get_layer(nodeB_info['layer_name']).output)
 
+
+                total_filters = np.arange(np.array(self.model.layers[nodeB_idx].get_weights())[0].shape[-1])
+                test_filters  = np.delete(total_filters, nodeB_idxs)
+                layer_weights = np.array(self.model.layers[nodeB_idx].get_weights().copy())
+                occluded_weights = layer_weights.copy()
+                for j in test_filters:
+                        occluded_weights[0][:,:,:,j] = 0
+                        try: occluded_weights[1][j] = 0
+                        except: pass
                 self.model.layers[nodeB_idx].set_weights(occluded_weights)
-                model = Model(inputs = self.model.input, outputs=self.model.get_layer(nodeB_info['layer_name']).output)
+                modelP = Model(inputs = self.model.input, outputs=self.model.get_layer(nodeB_info['layer_name']).output)
 
-
+                #########################
                 true_distributionB = []
+                predicted_distributionB = []
+
 		input_paths = os.listdir(dataset_path)
 		for i in range(len(input_paths) if len(input_paths) < max_samples else max_samples):
 			input_, label_ = loader(os.path.join(dataset_path, input_paths[i]), 
 								os.path.join(dataset_path, 
 								input_paths[i]).replace('mask', 'label').replace('labels', 'masks'))
-			prediction = np.squeeze(self.model.predict(input_[None, ...]))
+			true_distributionB.append(np.squeeze(modelT.predict(input_[None, ...])))
+			predicted_distributionB.append(np.squeeze(modelP.predict(input_[None, ...])))
 
 
-
-
-		for class_ in self.classinfo.keys():
-			dice_json[class_] = np.mean(dice_json[class_])
-
-		return dice_json
+		return self.KLDivergence(np.array(true_distributionB), np.array(predicted_distributionB))
 
 
 	def generate_graph(self, graph_info, dataset_path, dataset_path, dataloader, save_path = None, verbose = False, max_samples=10):
