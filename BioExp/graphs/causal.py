@@ -52,7 +52,7 @@ class CausalGraph():
 	def get_layer_idx(self, layer_name):
                 """
                 """
-	        for idx, layer in enumerate(self.model.layers):
+                for idx, layer in enumerate(self.model.layers):
 	        	if layer.name == layer_name:
 				return idx
 		
@@ -111,7 +111,8 @@ class CausalGraph():
 		for i in range(len(input_paths) if len(input_paths) < max_samples else max_samples):
 			input_, label_ = loader(os.path.join(dataset_path, input_paths[i]), 
 								os.path.join(dataset_path, 
-								input_paths[i]).replace('mask', 'label').replace('labels', 'masks'))
+								input_paths[i]).replace('mask', 
+                                                                    'label').replace('labels', 'masks'))
 			true_distributionB.append(np.squeeze(modelT.predict(input_[None, ...])))
 			predicted_distributionB.append(np.squeeze(modelP.predict(input_[None, ...])))
 
@@ -147,8 +148,8 @@ class CausalGraph():
                 rootNode = Node('Input')
                 self.causal_BN = Graph(rootNode)
 
-                self.causal_graph = np.zeros((len(node_ordering), len(node_ordering)))
-                info = {'idxi': [], 'idxj': [], 'nodei': [], 'nodej': []}
+                # self.causal_graph = np.zeros((len(node_ordering), len(node_ordering)))
+                # info = {'idxi': [], 'idxj': [], 'nodei': [], 'nodej': []}
 
                 for ii, (idxi, nodei) in enumerate(zip(node_indexing, node_ordering)):
                         nodei_info = {'concept_name': nodei, 
@@ -182,21 +183,25 @@ class CausalGraph():
                                 if link_info > edge_threshold:
                                         self.causal_BN.add_node(Nodej,
                                                         parentNode = Nodei)
-
+                                        Nodei.Distribution.append(link_info)
 
                                 
-                                self.causal_graph[ii, jj] = link_info
+                                # self.causal_graph[ii, jj] = link_info
 
-                                print("Causal Relation between: {}, {}; edge probability: {}".format(nodei, nodej, self.causal_graph[ii, jj]))
-                                info['nodei'].append(nodei_info)
-                                info['nodej'].append(nodej_info)
-                                info['idxi'].append(ii)
-                                info['idxj'].append(jj)
+                                print("Causal Relation between: {}, {}; edge probability: {}".format(nodei, 
+                                                        nodej, link_info))
+
+
+                                # info['nodei'].append(nodei_info)
+                                # info['nodej'].append(nodej_info)
+                                # info['idxi'].append(ii)
+                                # info['idxj'].append(jj)
 
                 os.makedirs(save_path, exist_ok=True)
-                info['graph'] = self.causal_graph
-                pickle.dump(info, open(os.path.join(save_path, 'causal_graph_info.pickle'), 'wb'))
-
+                # info['graph'] = self.causal_graph
+                # pickle.dump(info, open(os.path.join(save_path, 'causal_graph_info.pickle'), 'wb'))
+                pickle.dump({'graph': self.causal_BN, 'rootNode': rootNode}, 
+                                open(os.path.join(save_path, 'causal_graph_info.pickle'), 'wb'))
                 print("Causal Graph Generated")
 		pass
 
