@@ -19,7 +19,7 @@ Explaining Deep Learning Models which perform various image processing tasks in 
 - [x] Concept Identification
   - [x] Dissection based
   - [x] Flow based
-- [ ] Causal Graph 
+- [x] Causal Graph 
 - [ ] Inference Methods
 - [ ] Counterfactual Generation
 - [ ] Ante-hoc methods
