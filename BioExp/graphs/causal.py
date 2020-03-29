@@ -22,7 +22,8 @@ from skimage.transform import resize as imresize
 
 from scipy.ndimage.measurements import label
 from scipy.ndimage.morphology import binary_dilation, generate_binary_structure
-
+from pgm.helpers.common import Node
+from pgm.representation.LinkedListBN import Graph
 
 class CausalGraph():
 	"""
@@ -47,12 +48,12 @@ class CausalGraph():
 		self.classinfo  = classinfo
 		self.noutputs   = len(self.model.outputs)
 
-
+            
 	def get_layer_idx(self, layer_name):
                 """
                 """
-		for idx, layer in enumerate(self.model.layers):
-			if layer.name == layer_name:
+	        for idx, layer in enumerate(self.model.layers):
+	        	if layer.name == layer_name:
 				return idx
 		
         
@@ -86,7 +87,8 @@ class CausalGraph():
                         try: occluded_weights[1][j] = 0
                         except: pass
                 self.model.layers[nodeA_idx].set_weights(occluded_weights)
-                modelT = Model(inputs = self.model.input, outputs=self.model.get_layer(nodeB_info['layer_name']).output)
+                modelT = Model(inputs = self.model.input, 
+                            outputs = self.model.get_layer(nodeB_info['layer_name']).output)
 
 
                 total_filters = np.arange(np.array(self.model.layers[nodeB_idx].get_weights())[0].shape[-1])
@@ -98,7 +100,8 @@ class CausalGraph():
                         try: occluded_weights[1][j] = 0
                         except: pass
                 self.model.layers[nodeB_idx].set_weights(occluded_weights)
-                modelP = Model(inputs = self.model.input, outputs=self.model.get_layer(nodeB_info['layer_name']).output)
+                modelP = Model(inputs = self.model.input, 
+                                outputs=self.model.get_layer(nodeB_info['layer_name']).output)
 
                 #########################
                 true_distributionB = []
@@ -116,12 +119,17 @@ class CausalGraph():
 		return self.KLDivergence(np.array(true_distributionB), np.array(predicted_distributionB))
 
 
-	def generate_graph(self, graph_info, dataset_path, dataloader, save_path = None, verbose = False, max_samples=10):
+	def generate_graph(self, graph_info, dataset_path, dataloader, 
+                            edge_threshold = None, save_path = None, 
+                            verbose = False, max_samples=10):
                 """
                 """
 		layers   = graph_info['layer_name']
 		concept_names = graph_info['concept_name']
 		filter_idxs   = graph_info['feature_map_idxs']
+                
+                if not edge_threshold:
+                        raise ValueError("Assign proper edge threshold")
 
 		layer_names  = np.unique(layers)
                 layer_names  = layer_names[np.argsort([int(idx.split('_')[-1]) for idx in layer_names])]
@@ -136,18 +144,49 @@ class CausalGraph():
                 node_indexing = np.array(node_indexing)
                 node_ordering = np.array(node_ordering)
                 
+                rootNode = Node('Input')
+                self.causal_BN = Graph(rootNode)
+
                 self.causal_graph = np.zeros((len(node_ordering), len(node_ordering)))
                 info = {'idxi': [], 'idxj': [], 'nodei': [], 'nodej': []}
 
                 for ii, (idxi, nodei) in enumerate(zip(node_indexing, node_ordering)):
-                        nodei_info = {'concept_name': nodei, 'layer_name': layers[concept_names == nodei], 'feature_map_idxs': filter_idxs[concept_names == nodei]}
-                        for jj, (idxj, nodej) in enumerate(zip(node_indexing[node_indexing > idxi], node_ordering[node_indexing > idx])):
-                                nodej_info = {'concept_name': nodej, 'layer_name': layers[concept_names == nodej], 'feature_map_idxs': filter_idxs[concept_names == nodej]}
-                                self.causal_graph[ii, jj] = self.get_link(nodei_info,
-                                                                            nodej_info,
-                                                                            dataset_path = dataset_path,
-                                                                            loader = dataloader,
-                                                                            max_samples = max_samples)
+                        nodei_info = {'concept_name': nodei, 
+                                        'layer_name': layers[concept_names == nodei], 
+                                        'feature_map_idxs': filter_idxs[concept_names == nodei]}
+
+
+                        Nodei = Node(nodei)
+                        Nodei.info = nodei_info
+
+                        if nodei_info['layer_name'] == layer_names[0]:
+                                self.causal_BN.add_node(Nodei, parentNode = rootNode)
+
+
+                        for jj, (idxj, nodej) in enumerate(zip(node_indexing[node_indexing > idxi], 
+                                                                    node_ordering[node_indexing > idx])):
+
+                                nodej_info = {'concept_name': nodej, 
+                                                'layer_name': layers[concept_names == nodej], 
+                                                'feature_map_idxs': filter_idxs[concept_names == nodej]}
+
+                                Nodej = Node(nodej)
+                                Nodej.info = nodej_info
+                                
+                                link_info = self.get_link(nodei_info,
+                                                            nodej_info,
+                                                            dataset_path = dataset_path,
+                                                            loader = dataloader,
+                                                            max_samples = max_samples)
+                                
+                                if link_info > edge_threshold:
+                                        self.causal_BN.add_node(Nodej,
+                                                        parentNode = Nodei)
+
+
+                                
+                                self.causal_graph[ii, jj] = link_info
+
                                 print("Causal Relation between: {}, {}; edge probability: {}".format(nodei, nodej, self.causal_graph[ii, jj]))
                                 info['nodei'].append(nodei_info)
                                 info['nodej'].append(nodej_info)
