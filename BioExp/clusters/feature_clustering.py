@@ -58,7 +58,7 @@ class Cluster():
 
         return feature
 
-    def other_features(self, x):
+    def statistical_features(self, x):
         """
         """
 
@@ -93,6 +93,8 @@ class Cluster():
         """
 
         """
+        model = GaussianMixture(n_components=self.max_clusters)
+        model.fit(X)
         return model
 
 
@@ -100,29 +102,64 @@ class Cluster():
         """
 
         """
-        return model
-
-
-    def spectral(self, X):
-        """
-
-        """
+        model = AgglomerativeClustering(n_clusters = self.max_clusters)
+        model.fit(X)
         return model
 
 
     def kmeans(self, X):
         """
         """
+        model = KMeans(n_clusters = self.max_clusters)
+        model.fit(X)
+        return model
 
+
+    def birch(self, X, threshold = 0.01):
+        """
+
+        """
+        model = Birch(threshold = threshold, n_clusters = self.max_clusters)
+        model.fit(X)
+        return model
+
+
+    def dbscan(self, X, threshold = 0.10, min_samples = 0.01):
+        """
+
+        """
+        model = DBSCAN(eps=threshold, min_samples = max(10, int(min_samples*len(X))))
+        model.fit(X)
+        return model
+
+
+    def optics(self, X, threshold = 0.10, min_samples = 0.01):
+        """
+
+        """
+        model = OPTICS(eps=threshold, min_samples = max(10, int(min_samples*len(X))))
+        model.fit(X)
         return model
 
     
     def get_cluster(self, X):
         """
+
         """
 
         self.model = None
-
+        if self.method == "kmeans":
+            self.model = self.kmeans(X)
+        elif self.method == 'agglomerative':
+            self.model = self.Agglomerative(X)
+        elif self.method == 'gmm':
+            self.model = self.GMM(X)
+        elif self.method == 'birch':
+            self.model = self.birch(X)
+        elif self.method == 'dbscan':
+            self.model = self.dbscan(X)
+        elif self.method == 'optics':
+            self.model = self.optics(X)
 
 
     def plot_features(self, x, projection_dim = 2, label = None, save_path = None):
