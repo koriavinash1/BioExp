@@ -4,6 +4,9 @@ import keras
 import numpy as np
 import tensorflow as tf
 import os
+from radiomics.shape2D import RadiomicsShape2D
+from radiomics.firstorder import RadiomicsFirstOrder
+from radiomics.glcm import RadiomicsGLCM
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.cluster.hierarchy import dendrogram
@@ -45,29 +48,46 @@ class Cluster():
             if layer.name == self.layer:
                 self.layer_idx = idx
     
+    
+    def normalize(self, x):
+        """
+        """
+        norm01 = (x - np.min(x, axis=-1))/(np.max(x, axis=-1) + np.min(x, axis=-1))
+        return norm01
+
 
     def orientation_features(self, x):
         """
+
+        x: dim k x k x in_c
         """
 
+        feature = RadiomicsShape2D(x[:,:,0], 1.*(x[:,:,0] > 0.5))
+        for wt in range(x.shape[-1]):
+            feature += RadiomicsShape2D(x[:,:,wt], 1.*(x[:,:,wt] > 0.5))
+        feature /= x.shape[-1]
         return feature
 
-    def energy_features(self, x):
-        """
-        """
-
-        return feature
 
     def statistical_features(self, x):
         """
-        """
 
+        """
+        feature = RadiomicsFirstOrder(x[:,:,0], 1.*(x[:,:,0] > 0.5))
+        for wt in range(x.shape[-1]):
+            feature += RadiomicsFirstOrder(x[:,:,wt], 1.*(x[:,:,wt] > 0.5))
+        feature /= x.shape[-1]
         return feature
+
 
     def other_features(self, x):
         """
 
         """
+        feature = RadiomicsGLCM(x[:,:,0], 1.*(x[:,:,0] > 0.5))
+        for wt in range(x.shape[-1]):
+            feature += RadiomicsGLCM(x[:,:,wt], 1.*(x[:,:,wt] > 0.5))
+        feature /= x.shape[-1]
         return feature
 
 
@@ -76,17 +96,19 @@ class Cluster():
         wts: shape(k, k, in_c, out_c)
 
         """
+        wts = self.normalize(wts)
         nfeatures = wts.shape[-1]
         features = []
         for i in nfeatures:
             feature = []
             feature.extend(self.orientation_features(wts[:, :, :, i]))
-            feature.extend(self.energy_features(wts[:, :, :, i]))
             feature.extend(self.statistical_features(wts[:, :, :, i]))
             feature.extend(self.other_features(wts[:, :, :, i]))
             features.append(feature)
 
-        return np.array(features)
+        features = np.array(features)
+        print ("Extracted feature dimension: {}".format(features.shape))
+        return features
 
 
     def GMM(self, X):
@@ -146,7 +168,7 @@ class Cluster():
         """
 
         """
-
+    
         self.model = None
         if self.method == "kmeans":
             self.model = self.kmeans(X)
@@ -160,6 +182,8 @@ class Cluster():
             self.model = self.dbscan(X)
         elif self.method == 'optics':
             self.model = self.optics(X)
+
+        return self.model.predict(X) 
 
 
     def plot_features(self, x, projection_dim = 2, label = None, save_path = None):
@@ -210,4 +234,33 @@ class Cluster():
 
         self.plot_features(x, 2, label, os.path.join(save_path, 'layer_{}_2d.png'.format(self.layer_idx)))
         self.plot_features(x, 3, label, os.path.join(save_path, 'layer_{}_3d.png'.format(self.layer_idx)))
+        return label
+
+    def plot_weights(self, x, n = 3, save_path=None):
+        """
+        dim x: k x k x in_c x out_c
+        """
+        wt_idx = np.random.randint(0, x.shape[-1], n)
+        rws = int(x.shape[-2]**0.5)
+        cls = rws
+        if not rws**2 == x.shape[-2]:
+            rws = rws + 1
         
+        feature = np.zeros((x.shape[0]*rws, x.shape[1]*cls))
+        for ii in wt_idx:
+            wt = x[:,:,:, ii]
+            for i in rws:
+                for j in cls:
+                    try:
+                        feature[i*x.shape[0]: (i + 1)*x.shape[0], 
+                            j*x.shape[1]: (j + 1)*x.shape[1]] = wt[:, :, j*rws + i]
+                    except:
+                        pass
+
+            plt.clf()
+            plt.imshow(feature)
+            if not save_path:
+                plt.show()
+            else:
+                os.makedirs(save_path, exist_ok = True)
+                plt.savefig(os.path.join(save_path, 'wt_sample_layer_{}_idx_{}.png'.format(self.layer_idx, ii)))
