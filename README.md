@@ -16,6 +16,8 @@ Explaining Deep Learning Models which perform various image processing tasks in 
 - [x] CAM Analysis
 - [x] RCT on input and concept space 
 - [x] Concept generation clustering analysis
+   - [x] wts based clustering
+   - [x] feature based clustering
 - [x] Concept Identification
   - [x] Dissection based
   - [x] Flow based
