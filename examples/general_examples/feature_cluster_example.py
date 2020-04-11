@@ -1,5 +1,5 @@
 import sys
-sys.path.append('..')
+sys.path.append('../..')
 import argparse
 import keras
 import numpy as np
@@ -46,7 +46,7 @@ model.load_weights(weights_path)
 
 for layer_name in layers_to_consider:
     C = clustering.Cluster(model, weights_path, layer_name, method = 'optics')
-    labels = C.get_clusters(threshold = 0.5, save_path='cluster_results')
+    labels = C.get_clusters(save_path='cluster_results')
     print (labels)
     
     C.plot_weights(n = 5, save_path = 'model_weights')
