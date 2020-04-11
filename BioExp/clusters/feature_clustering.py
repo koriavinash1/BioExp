@@ -3,7 +3,7 @@ matplotlib.use('Agg')
 import keras
 import numpy as np
 import tensorflow as tf
-import os
+import os, cpickle
 from radiomics.shape2D import RadiomicsShape2D
 from radiomics.firstorder import RadiomicsFirstOrder
 from radiomics.glcm import RadiomicsGLCM
@@ -47,8 +47,10 @@ class Cluster():
         for idx, layer in enumerate(self.model.layers):
             if layer.name == self.layer:
                 self.layer_idx = idx
-    
-    
+        self.weights = np.array(self.model.layers[self.layer_idx].get_weights())
+        self.features = self.get_features(self.weights)
+
+
     def normalize(self, x):
         """
         """
@@ -111,82 +113,89 @@ class Cluster():
         return features
 
 
-    def GMM(self, X):
+    def GMM(self, x):
         """
 
         """
         model = GaussianMixture(n_components=self.max_clusters)
-        model.fit(X)
+        model.fit(x)
         return model
 
 
-    def Agglomerative(self, X):
+    def Agglomerative(self, x):
         """
 
         """
         model = AgglomerativeClustering(n_clusters = self.max_clusters)
-        model.fit(X)
+        model.fit(x)
         return model
 
 
-    def kmeans(self, X):
+    def kmeans(self, x):
         """
         """
         model = KMeans(n_clusters = self.max_clusters)
-        model.fit(X)
+        model.fit(x)
         return model
 
 
-    def birch(self, X, threshold = 0.01):
+    def birch(self, x, threshold = 0.01):
         """
 
         """
         model = Birch(threshold = threshold, n_clusters = self.max_clusters)
-        model.fit(X)
+        model.fit(x)
         return model
 
 
-    def dbscan(self, X, threshold = 0.10, min_samples = 0.01):
+    def dbscan(self, x, threshold = 0.10, min_samples = 0.01):
         """
 
         """
         model = DBSCAN(eps=threshold, min_samples = max(10, int(min_samples*len(X))))
-        model.fit(X)
+        model.fit(x)
         return model
 
 
-    def optics(self, X, threshold = 0.10, min_samples = 0.01):
+    def optics(self, x, threshold = 0.10, min_samples = 0.01):
         """
 
         """
         model = OPTICS(eps=threshold, min_samples = max(10, int(min_samples*len(X))))
-        model.fit(X)
+        model.fit(x)
         return model
 
     
-    def get_cluster(self, X):
+    def get_clusters(self, save_path=None):
         """
 
         """
-    
+        
         self.model = None
         if self.method == "kmeans":
-            self.model = self.kmeans(X)
+            self.model = self.kmeans(self.features)
         elif self.method == 'agglomerative':
-            self.model = self.Agglomerative(X)
+            self.model = self.Agglomerative(self.features)
         elif self.method == 'gmm':
-            self.model = self.GMM(X)
+            self.model = self.GMM(self.features)
         elif self.method == 'birch':
-            self.model = self.birch(X)
+            self.model = self.birch(self.features)
         elif self.method == 'dbscan':
-            self.model = self.dbscan(X)
+            self.model = self.dbscan(self.features)
         elif self.method == 'optics':
-            self.model = self.optics(X)
+            self.model = self.optics(self.features)
+        
+        self.labels = self.model.predict(self.features)
+        if save_path:
+            os.makedirs(save_path, exist_ok = True)
+            with open(os.path.join(save_path, self.layer_name, 'clusters.cpickle', 'wb')) as file:
+                cpickle.dump(file, {'layer_name': self.layer_name,
+                                        'clusters': self.labels})
+            
+        return self.labels 
 
-        return self.model.predict(X) 
 
-
-    def plot_features(self, x, projection_dim = 2, label = None, save_path = None):
+    def plot_features(self, projection_dim = 2, label = None, save_path = None):
         """
 
         dim x: z x nfeatures
@@ -194,8 +203,8 @@ class Cluster():
         save_path: path to save plot
         """ 
         pca = PCA(n_components=projection_dim)
-        pca.fit(x)
-        X = pca.transform(x)
+        pca.fit(self.features)
+        X = pca.transform(self.features)
 
         fig = plt.figure(1, figsize=(4, 3))
         plt.clf()
@@ -219,41 +228,44 @@ class Cluster():
             plt.show()
         else:
             os.makedirs(save_path, exist_ok=True)
-            plt.savefig(save_path)
+            plt.savefig(os.path.join(save_path, 'features_layer_{}_projection_{}.png'.format(self.layer_idx, projection_dim)))
 
     
-    def plot_clusters(self, x, save_path = None):
+    def plot_clusters(self, save_path = None):
         """
         dim x: z x nfeatures
-        save_path: path to save plot
+        save_path: root path to save plot
         """
         try:
-            label = self.model.predict(x)
+            label = self.labels
         except:
             raise ValueError("Model not generated yet, First run get_cluster, attr")
 
-        self.plot_features(x, 2, label, os.path.join(save_path, 'layer_{}_2d.png'.format(self.layer_idx)))
-        self.plot_features(x, 3, label, os.path.join(save_path, 'layer_{}_3d.png'.format(self.layer_idx)))
+        self.plot_features(2, label, os.path.join(save_path, 'layer_{}_2d.png'.format(self.layer_idx)))
+        self.plot_features(3, label, os.path.join(save_path, 'layer_{}_3d.png'.format(self.layer_idx)))
         return label
 
-    def plot_weights(self, x, n = 3, save_path=None):
+
+    def plot_weights(self, n = 3, save_path=None):
         """
         dim x: k x k x in_c x out_c
         """
-        wt_idx = np.random.randint(0, x.shape[-1], n)
-        rws = int(x.shape[-2]**0.5)
+        shape = self.weights.shape
+        wt_idx = np.random.randint(0, shape[-1], n)
+        rws = int(shape[-2]**0.5)
         cls = rws
-        if not rws**2 == x.shape[-2]:
+
+        if not rws**2 == shape[-2]:
             rws = rws + 1
         
-        feature = np.zeros((x.shape[0]*rws, x.shape[1]*cls))
+        feature = np.zeros((shape[0]*rws, shape[1]*cls))
         for ii in wt_idx:
-            wt = x[:,:,:, ii]
+            wt = self.weights[:,:,:, ii]
             for i in rws:
                 for j in cls:
                     try:
-                        feature[i*x.shape[0]: (i + 1)*x.shape[0], 
-                            j*x.shape[1]: (j + 1)*x.shape[1]] = wt[:, :, j*rws + i]
+                        feature[i*shape[0]: (i + 1)*shape[0], 
+                            j*shape[1]: (j + 1)*shape[1]] = wt[:, :, j*rws + i]
                     except:
                         pass
 
