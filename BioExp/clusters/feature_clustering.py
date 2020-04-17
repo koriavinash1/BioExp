@@ -49,7 +49,8 @@ class Cluster():
             if layer.name == self.layer_name:
                 self.layer_idx = idx
         self.weights = np.array(self.model.layers[self.layer_idx].get_weights())[0]
-        self.features = self.get_features(self.weights)
+        # self.features = self.get_features(self.weights)
+        self.features = self.flatten(self. weights)
 
 
     def normalize(self, x):
@@ -113,13 +114,23 @@ class Cluster():
         features = []
         for i in range(nfeatures):
             feature = []
-            feature.extend(self.orientation_features(wts[:, :, :, i]))
+            # feature.extend(self.orientation_features(wts[:, :, :, i]))
             feature.extend(self.statistical_features(wts[:, :, :, i]))
-            feature.extend(self.other_features(wts[:, :, :, i]))
+            # feature.extend(self.other_features(wts[:, :, :, i]))
             features.append(feature)
 
         features = np.array(features)
         print ("Extracted feature dimension: {}".format(features.shape))
+        return features
+
+
+
+    def flatten(self, wts):
+        """
+        """
+        wts = self.normalize(wts)
+        features = wts.reshape(-1, wts.shape[-1]).T
+        print ("Extracted features dimension: {}".format(features.shape))
         return features
 
 
@@ -157,7 +168,7 @@ class Cluster():
         model.fit(x)
         return model
 
-
+    
     def dbscan(self, x, threshold = 0.01, min_samples = 0.01):
         """
 

@@ -45,7 +45,7 @@ model.load_weights(weights_path)
 
 
 for layer_name in layers_to_consider:
-    C = clustering.Cluster(model, weights_path, layer_name, method = 'optics')
+    C = clustering.Cluster(model, weights_path, layer_name, method = 'gmm', max_clusters=5)
     labels = C.get_clusters(save_path='cluster_results')
     print (labels)
     
