@@ -4,6 +4,6 @@ opencv-python
 simpleitk
 pandas
 pillow
-scipy==1.6.0
+scipy==0.16.0
 keras-vis
 
