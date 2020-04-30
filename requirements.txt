@@ -1,0 +1,9 @@
+tensorflow-gpu==1.14
+keras
+opencv-python
+simpleitk
+pandas
+pillow
+scipy==1.6.0
+keras-vis
+
