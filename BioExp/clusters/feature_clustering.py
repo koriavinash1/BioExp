@@ -3,7 +3,8 @@ matplotlib.use('Agg')
 import keras
 import numpy as np
 import tensorflow as tf
-import os, cpickle
+import os, pickle
+import SimpleITK as sitk
 from radiomics.shape2D import RadiomicsShape2D
 from radiomics.firstorder import RadiomicsFirstOrder
 from radiomics.glcm import RadiomicsGLCM
@@ -40,33 +41,43 @@ class Cluster():
 
         self.model = model
         self.weights = weights_pth
-        self.layer = layer_name
+        self.layer_name = layer_name
         self.max_clusters = max_clusters
         self.method = method
         self.layer_idx = 0
         for idx, layer in enumerate(self.model.layers):
-            if layer.name == self.layer:
+            if layer.name == self.layer_name:
                 self.layer_idx = idx
-        self.weights = np.array(self.model.layers[self.layer_idx].get_weights())
-        self.features = self.get_features(self.weights)
+        self.weights = np.array(self.model.layers[self.layer_idx].get_weights())[0]
+        # self.features = self.get_features(self.weights)
+        self.features = self.flatten(self. weights)
 
 
     def normalize(self, x):
         """
         """
-        norm01 = (x - np.min(x, axis=-1))/(np.max(x, axis=-1) + np.min(x, axis=-1))
+        norm01 = (x - np.min(x, axis=-1)[..., None])/(np.max(x, axis=-1)[..., None] - np.min(x, axis=-1)[..., None])
         return norm01
+
+
+    def extract_features(self, x, mask, function):
+        imr = sitk.GetImageFromArray
+        try:
+            features = function(imr(x), imr(mask))
+            features.enableAllFeatures()
+            features.execute()
+            return np.array(list(features.featureValues.values()))
+        except:
+            return 0
 
 
     def orientation_features(self, x):
         """
-
         x: dim k x k x in_c
         """
-
-        feature = RadiomicsShape2D(x[:,:,0], 1.*(x[:,:,0] > 0.5))
-        for wt in range(x.shape[-1]):
-            feature += RadiomicsShape2D(x[:,:,wt], 1.*(x[:,:,wt] > 0.5))
+        feature = self.extract_features(x[:,:,0], np.ones_like(x[:,:,0]), RadiomicsShape2D)
+        for wt in range(1, x.shape[-1]):
+            feature += self.extract_features(x[:,:,wt], np.ones_like(x[:,:,wt]), RadiomicsShape2D)
         feature /= x.shape[-1]
         return feature
 
@@ -75,9 +86,9 @@ class Cluster():
         """
 
         """
-        feature = RadiomicsFirstOrder(x[:,:,0], 1.*(x[:,:,0] > 0.5))
-        for wt in range(x.shape[-1]):
-            feature += RadiomicsFirstOrder(x[:,:,wt], 1.*(x[:,:,wt] > 0.5))
+        feature = self.extract_features(x[:,:,0], np.ones_like(x[:,:,0]), RadiomicsFirstOrder)
+        for wt in range(1, x.shape[-1]):
+            feature += self.extract_features(x[:,:,wt], np.ones_like(x[:,:,wt]), RadiomicsFirstOrder)
         feature /= x.shape[-1]
         return feature
 
@@ -86,9 +97,9 @@ class Cluster():
         """
 
         """
-        feature = RadiomicsGLCM(x[:,:,0], 1.*(x[:,:,0] > 0.5))
-        for wt in range(x.shape[-1]):
-            feature += RadiomicsGLCM(x[:,:,wt], 1.*(x[:,:,wt] > 0.5))
+        feature = self.extract_features(x[:,:,0], np.ones_like(x[:,:,0]), RadiomicsGLCM)
+        for wt in range(1, x.shape[-1]):
+            feature += self.extract_features(x[:,:,wt], np.ones_like(x[:,:,wt]), RadiomicsGLCM)
         feature /= x.shape[-1]
         return feature
 
@@ -101,15 +112,25 @@ class Cluster():
         wts = self.normalize(wts)
         nfeatures = wts.shape[-1]
         features = []
-        for i in nfeatures:
+        for i in range(nfeatures):
             feature = []
-            feature.extend(self.orientation_features(wts[:, :, :, i]))
+            # feature.extend(self.orientation_features(wts[:, :, :, i]))
             feature.extend(self.statistical_features(wts[:, :, :, i]))
-            feature.extend(self.other_features(wts[:, :, :, i]))
+            # feature.extend(self.other_features(wts[:, :, :, i]))
             features.append(feature)
 
         features = np.array(features)
         print ("Extracted feature dimension: {}".format(features.shape))
+        return features
+
+
+
+    def flatten(self, wts):
+        """
+        """
+        wts = self.normalize(wts)
+        features = wts.reshape(-1, wts.shape[-1]).T
+        print ("Extracted features dimension: {}".format(features.shape))
         return features
 
 
@@ -147,21 +168,21 @@ class Cluster():
         model.fit(x)
         return model
 
-
-    def dbscan(self, x, threshold = 0.10, min_samples = 0.01):
+    
+    def dbscan(self, x, threshold = 0.01, min_samples = 0.01):
         """
 
         """
-        model = DBSCAN(eps=threshold, min_samples = max(10, int(min_samples*len(X))))
+        model = DBSCAN(eps=threshold, min_samples = max(10, int(min_samples*len(x))))
         model.fit(x)
         return model
 
 
-    def optics(self, x, threshold = 0.10, min_samples = 0.01):
+    def optics(self, x, threshold = 0.01, min_samples = 0.01):
         """
 
         """
-        model = OPTICS(eps=threshold, min_samples = max(10, int(min_samples*len(X))))
+        model = OPTICS(eps=threshold, min_samples = max(10, int(min_samples*len(x))))
         model.fit(x)
         return model
 
@@ -185,12 +206,16 @@ class Cluster():
         elif self.method == 'optics':
             self.model = self.optics(self.features)
         
-        self.labels = self.model.predict(self.features)
+        try:
+            self.labels = self.model.predict(self.features)
+        except:
+            self.labels = self.model.fit_predict(self.features)
+
         if save_path:
             os.makedirs(save_path, exist_ok = True)
-            with open(os.path.join(save_path, self.layer_name, 'clusters.cpickle', 'wb')) as file:
-                cpickle.dump(file, {'layer_name': self.layer_name,
-                                        'clusters': self.labels})
+            with open(os.path.join(save_path, self.layer_name + '_clusters.cpickle'), 'wb') as file:
+                pickle.dump({'layer_name': self.layer_name,
+                                        'clusters': self.labels}, file)
             
         return self.labels 
 
@@ -205,22 +230,26 @@ class Cluster():
         pca = PCA(n_components=projection_dim)
         pca.fit(self.features)
         X = pca.transform(self.features)
-
         fig = plt.figure(1, figsize=(4, 3))
         plt.clf()
 
         if projection_dim == 3:
             ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
             plt.cla()
-            if not label: ax.scatter(X, cmap=plt.cm.nipy_spectral, edgecolor='k')
+            if not isinstance(label, np.ndarray): ax.scatter(X[:, 0], X[:, 1], X[:, 2], cmap=plt.cm.nipy_spectral, edgecolor='k')
             else :
                 for i in np.unique(label):
-                    ax.scatter(X[label == i], c=i, cmap=plt.cm.nipy_spectral, edgecolor='k')
+                    ax.scatter(X[label == i][:, 0],
+                                X[label == i][:, 1],
+                                X[label == i][:, 2], 
+                                cmap=plt.cm.nipy_spectral, edgecolor='k')
         elif projection_dim == 2:
-            if not label: plt.scatter(X, cmap=plt.cm.nipy_spectral, edgecolor='k')
+            if not isinstance(label, np.ndarray): plt.scatter(X[:,0], X[:,1], cmap=plt.cm.nipy_spectral, edgecolor='k')
             else:
                 for i in np.unique(label):
-                    plt.scatter(X[label == i], c=i, cmap=plt.cm.nipy_spectral, edgecolor='k')
+                    plt.scatter(X[label == i][:,0],
+                                X[label == i][:,1],
+                                cmap=plt.cm.nipy_spectral, edgecolor='k')
         else:
             raise ValueError("Projection dimension > 3, cannot be ploted")
 
@@ -241,8 +270,8 @@ class Cluster():
         except:
             raise ValueError("Model not generated yet, First run get_cluster, attr")
 
-        self.plot_features(2, label, os.path.join(save_path, 'layer_{}_2d.png'.format(self.layer_idx)))
-        self.plot_features(3, label, os.path.join(save_path, 'layer_{}_3d.png'.format(self.layer_idx)))
+        self.plot_features(2, label, save_path)
+        self.plot_features(3, label, save_path)
         return label
 
 
@@ -261,8 +290,8 @@ class Cluster():
         feature = np.zeros((shape[0]*rws, shape[1]*cls))
         for ii in wt_idx:
             wt = self.weights[:,:,:, ii]
-            for i in rws:
-                for j in cls:
+            for i in range(rws):
+                for j in range(cls):
                     try:
                         feature[i*shape[0]: (i + 1)*shape[0], 
                             j*shape[1]: (j + 1)*shape[1]] = wt[:, :, j*rws + i]
