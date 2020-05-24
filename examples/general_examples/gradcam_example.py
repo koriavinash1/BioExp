@@ -1,7 +1,7 @@
 import numpy as np
 import os
 import sys
-sys.path.append('..')
+sys.path.append('../..')
 from BioExp.spatial import flow
 from BioExp.helpers import utils
 from BioExp.helpers import losses

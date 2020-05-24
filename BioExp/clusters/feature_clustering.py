@@ -49,8 +49,8 @@ class Cluster():
             if layer.name == self.layer_name:
                 self.layer_idx = idx
         self.weights = np.array(self.model.layers[self.layer_idx].get_weights())[0]
-        # self.features = self.get_features(self.weights)
-        self.features = self.flatten(self. weights)
+        self.features = self.get_features(self.weights)
+        # self.features = self.flatten(self. weights)
 
 
     def normalize(self, x):
@@ -120,7 +120,7 @@ class Cluster():
             features.append(feature)
 
         features = np.array(features)
-        print ("Extracted feature dimension: {}".format(features.shape))
+        print ("[INFO: BioExp Clustering] Layer: {} Extracted feature dimension: {}".format(self.layer, features.shape))
         return features
 
 
@@ -130,7 +130,7 @@ class Cluster():
         """
         wts = self.normalize(wts)
         features = wts.reshape(-1, wts.shape[-1]).T
-        print ("Extracted features dimension: {}".format(features.shape))
+        print ("[INFO: BioExp Clustering] Layer: {} Extracted features dimension: {}".format(self.layer, features.shape))
         return features
 
 
@@ -257,7 +257,7 @@ class Cluster():
             plt.show()
         else:
             os.makedirs(save_path, exist_ok=True)
-            plt.savefig(os.path.join(save_path, 'features_layer_{}_projection_{}.png'.format(self.layer_idx, projection_dim)))
+            plt.savefig(os.path.join(save_path, 'features_layer_{}_projection_{}.png'.format(self.layer_idx, projection_dim)), bbox_inches='tight')
 
     
     def plot_clusters(self, save_path = None):
@@ -275,33 +275,36 @@ class Cluster():
         return label
 
 
-    def plot_weights(self, n = 3, save_path=None):
+    def plot_weights(self, labels, n = 5, save_path=None):
         """
         dim x: k x k x in_c x out_c
         """
         shape = self.weights.shape
-        wt_idx = np.random.randint(0, shape[-1], n)
-        rws = int(shape[-2]**0.5)
-        cls = rws
 
-        if not rws**2 == shape[-2]:
-            rws = rws + 1
-        
-        feature = np.zeros((shape[0]*rws, shape[1]*cls))
-        for ii in wt_idx:
-            wt = self.weights[:,:,:, ii]
-            for i in range(rws):
-                for j in range(cls):
-                    try:
-                        feature[i*shape[0]: (i + 1)*shape[0], 
-                            j*shape[1]: (j + 1)*shape[1]] = wt[:, :, j*rws + i]
-                    except:
-                        pass
+        for label in np.unique(labels):
+            lab_idx = np.where(labels==label)[0]
+            wt_idx = np.random.choice(lab_idx, n)
+            rws = int(shape[-2]**0.5)
+            cls = rws
 
-            plt.clf()
-            plt.imshow(feature)
-            if not save_path:
-                plt.show()
-            else:
-                os.makedirs(save_path, exist_ok = True)
-                plt.savefig(os.path.join(save_path, 'wt_sample_layer_{}_idx_{}.png'.format(self.layer_idx, ii)))
+            if not rws**2 == shape[-2]:
+                rws = rws + 1
+            
+            feature = np.zeros((shape[0]*rws, shape[1]*cls))
+            for ii in wt_idx:
+                wt = self.weights[:,:,:, ii]
+                for i in range(rws):
+                    for j in range(cls):
+                        try:
+                            feature[i*shape[0]: (i + 1)*shape[0], 
+                                j*shape[1]: (j + 1)*shape[1]] = wt[:, :, j*rws + i]
+                        except:
+                            pass
+
+                plt.clf()
+                plt.imshow(feature)
+                if not save_path:
+                    plt.show()
+                else:
+                    os.makedirs(save_path, exist_ok = True)
+                    plt.savefig(os.path.join(save_path, 'cluster_{}_idx_{}.png'.format(label, ii)), bbox_inches='tight')

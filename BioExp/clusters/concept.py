@@ -119,8 +119,6 @@ class ConceptIdentification():
         node_idxs = concept_info['filter_idxs']
         concepts = concepts[:, :, node_idxs]
 
-        print (np.unique(concepts))
-        print ("================")
         if save_path:
             nrows = int(len(node_idxs)**.5) + 1
             self.save_concepts(test_img, concepts, nrows, nrows, concept_info['concept_name'], save_path = save_path)
@@ -148,7 +146,6 @@ class ConceptIdentification():
             save_path:
             loader:
             test_imgs:
-            img_ROI:
         """
         layer_name = concept_info['layer_name']        
         node_idxs = concept_info['filter_idxs']
@@ -260,7 +257,6 @@ class ConceptIdentification():
             bias_sampler = self._gaussian_sampler_(occluded_weights[1][:,:,:,node_idxs], len(node_idxs))
         except: pass
         
-        print (weight_sampler().shape, occluded_weights[0][:,:,:,node_idxs].shape)
         gradlist = []
         for _ in range(nmontecarlo):
 
@@ -280,7 +276,7 @@ class ConceptIdentification():
             #    newmodel.layers[ii].set_weights(self.model.layers[ii].get_weights())
             newmodel.layers[-1].set_weights((np.ones((1, 1, len(total_filters), 1)), np.ones(1)))
 
-            dice, information,nclass_grad = singlelayercam(newmodel, test_img, test_gt, 
+            dice, information, nclass_grad = singlelayercam(newmodel, test_img, test_gt, 
                         nclasses = 1, 
                         name  = concept_info['concept_name'], 
                         st_layer_idx = -1, 
@@ -358,4 +354,4 @@ class ConceptIdentification():
             cax = divider.append_axes("right", size="5%", pad=0.2)
             cb = plt.colorbar(im, ax=ax, cax=cax )
             os.makedirs(save_path, exist_ok = True)
-            plt.savefig(os.path.join(save_path, concept_info['concept_name'] +'.png'), bbox_inches='tight')
+            plt.savefig(os.path.join(save_path, concept_info['concept_name'] +'_robustness.png'), bbox_inches='tight')

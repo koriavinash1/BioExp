@@ -6,6 +6,6 @@ conda install -c simpleitk simpleitk
 conda install -c anaconda pandas
 
 pip install pillow
-pip install scipy==1.6.0
+pip install scipy==0.16.0
 pip install keras-vis
 

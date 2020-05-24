@@ -1,9 +1,11 @@
 tensorflow-gpu==1.14
-keras
+keras ==2.1.5
+sklearn
 opencv-python
 simpleitk
 pandas
 pillow
 scipy>=0.19.0
 keras-vis
-
+sklearn
+tqdm
