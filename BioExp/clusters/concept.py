@@ -355,3 +355,5 @@ class ConceptIdentification():
             cb = plt.colorbar(im, ax=ax, cax=cax )
             os.makedirs(save_path, exist_ok = True)
             plt.savefig(os.path.join(save_path, concept_info['concept_name'] +'_robustness.png'), bbox_inches='tight')
+            
+        return np.mean(montecarlo_grad, axis=0)

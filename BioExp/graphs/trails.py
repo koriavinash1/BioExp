@@ -70,9 +70,11 @@ class EstimateTrails(object):
                 trail += '  ->  ({})'.format(node.name)
                 traildescription += '  ->  ({})'.format(node.info['description'])
                 if visual:
-                    concept_imgs.append(self.flow_based_identifier(node.info, 
+                    concept_imgs.append(self.check_robustness(node.info, 
                                                        test_img = image,
-                                                       test_gt = gt))
+                                                       test_gt = gt,
+                                                       save_path = None,
+                                                       nmontecarlo = 10))
             trails.append(trail)
             trailsdescription.append(traildescription)
             visualtrails.append(concept_imgs)
