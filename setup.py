@@ -25,7 +25,8 @@ setuptools.setup(
          'tensorflow-gpu>=1.15.2',
          'keras',
          'keras-vis',
-         'lucid'
+         'lucid',
+         'ppgm'
          ],
 
      classifiers=[
