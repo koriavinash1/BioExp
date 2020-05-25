@@ -188,6 +188,7 @@ class ConceptIdentification():
                         threshold = 0.5)
         print ("[INFO: BioExp Concept Identification] Identified Concept {} in layer {}".format(concept_info['concept_name'], layer_name))
 
+        del model, newmodel
         return grad[0]
 
 
@@ -285,6 +286,7 @@ class ConceptIdentification():
         try:
             del bias_sampler
         except: pass       
+        del model, newmodel
         return np.array(gradlist)
 
 

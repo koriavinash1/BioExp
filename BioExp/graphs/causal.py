@@ -95,14 +95,14 @@ class CausalGraph():
         """
             get link between two nodes, nodeA, nodeB
             occlude at nodeA and observe changes in nodeB
-            nodeA_info    : {'layer_name', 'feature_map_idxs'}
-            nodeB_info    : {'layer_name', 'feature_map_idxs'}
+            nodeA_info    : {'layer_name', 'filter_idxs'}
+            nodeB_info    : {'layer_name', 'filter_idxs'}
         """
 
         nodeA_idx   = self.get_layer_idx(nodeA_info['layer_name'])
-        nodeA_idxs  = nodeA_info['feature_map_idxs']
+        nodeA_idxs  = nodeA_info['filter_idxs']
         nodeB_idx   = self.get_layer_idx(nodeB_info['layer_name'])
-        nodeB_idxs  = nodeB_info['feature_map_idxs']
+        nodeB_idxs  = nodeB_info['filter_idxs']
 
         total_filters = np.arange(np.array(self.model.layers[nodeA_idx].get_weights())[0].shape[-1])
 
@@ -149,6 +149,8 @@ class CausalGraph():
             true_distributionB.append(np.squeeze(modelT.predict(input_[None, ...])))
             predicted_distributionB.append(np.squeeze(modelP.predict(input_[None, ...])))
 
+
+        del modelP, modelT
         return self.MI(np.array(true_distributionB), np.array(predicted_distributionB))
 
 
