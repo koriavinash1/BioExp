@@ -136,8 +136,7 @@ class ConceptIdentification():
 
     def flow_based_identifier(self, concept_info, 
                             save_path, 
-                            test_img,
-                            test_gt):
+                            test_img):
         """
             test significance of each concepts
 
@@ -180,14 +179,14 @@ class ConceptIdentification():
         #    newmodel.layers[ii].set_weights(self.model.layers[ii].get_weights())
         newmodel.layers[-1].set_weights((np.ones((1, 1, len(total_filters), 1)), np.ones(1)))
 
-        dice, information, grad = singlelayercam(newmodel, test_img, test_gt, 
+        grad = singlelayercam(newmodel, test_img, 
                         nclasses = 1, 
                         save_path = save_path, 
                         name  = concept_info['concept_name'], 
                         st_layer_idx = -1, 
                         end_layer_idx = 1,
                         threshold = 0.5)
-        print ("[BioExp:INFO Mean Layer Dice:] ", dice, information)
+        print ("[INFO: BioExp Concept Identification] Identified Concept {} in layer {}".format(concept_info['concept_name'], layer_name))
 
         return grad[0]
 
@@ -221,7 +220,6 @@ class ConceptIdentification():
 
     def concept_robustness(self, concept_info,
                             test_img,
-                            test_gt,
                             nmontecarlo=3):
         """
             test significance of each concepts
@@ -276,7 +274,7 @@ class ConceptIdentification():
             #    newmodel.layers[ii].set_weights(self.model.layers[ii].get_weights())
             newmodel.layers[-1].set_weights((np.ones((1, 1, len(total_filters), 1)), np.ones(1)))
 
-            dice, information, nclass_grad = singlelayercam(newmodel, test_img, test_gt, 
+            nclass_grad = singlelayercam(newmodel, test_img, 
                         nclasses = 1, 
                         name  = concept_info['concept_name'], 
                         st_layer_idx = -1, 
@@ -293,17 +291,14 @@ class ConceptIdentification():
     def check_robustness(self, concept_info,
                             save_path, 
                             test_img,
-                            test_gt,
                             save_all = False,
                             nmontecarlo = 4):
 
         actual_grad = self.flow_based_identifier(concept_info,
                                                save_path = None,
-                                               test_img = test_img,
-                                               test_gt = test_gt)
+                                               test_img = test_img)
         montecarlo_grad = self.concept_robustness(concept_info,
                                               test_img,
-                                              test_gt,
                                               nmontecarlo=nmontecarlo)
 
         if save_path:
@@ -314,7 +309,8 @@ class ConceptIdentification():
                 gs.update(wspace=0.025, hspace=0.05)
 
                 ax = plt.subplot(gs[0])
-                im = ax.imshow(actual_grad, cmap=plt.get_cmap('hot'), vmin=0, vmax=1)
+                im = ax.imshow(np.squeeze(test_img), vmin=0, vmax=1)
+                im = ax.imshow(actual_grad, cmap=plt.get_cmap('jet'), vmin=0, vmax=1, alpha=0.5)
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
                 ax.set_aspect('equal')
@@ -323,7 +319,8 @@ class ConceptIdentification():
                 
                 for ii in range(nmontecarlo):
                     ax = plt.subplot(gs[ii + 1])
-                    im = ax.imshow(montecarlo_grad[ii], cmap=plt.get_cmap('hot'), vmin=0, vmax=1)
+                    im = ax.imshow(np.squeeze(test_img), vmin=0, vmax=1)
+                    im = ax.imshow(montecarlo_grad[ii], cmap=plt.get_cmap('jet'), vmin=0, vmax=1, alpha=0.5)
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
                     ax.set_aspect('equal')
@@ -335,7 +332,8 @@ class ConceptIdentification():
                 gs.update(wspace=0.025, hspace=0.05)
 
                 ax = plt.subplot(gs[0])
-                im = ax.imshow(actual_grad, cmap=plt.get_cmap('hot'), vmin=0, vmax=1)
+                im = ax.imshow(np.squeeze(test_img), vmin=0, vmax=1)
+                im = ax.imshow(actual_grad, cmap=plt.get_cmap('jet'), vmin=0, vmax=1, alpha=0.5)
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
                 ax.set_aspect('equal')
@@ -343,7 +341,8 @@ class ConceptIdentification():
                 ax.tick_params(bottom='off', top='off', labelbottom='off' )
                 
                 ax = plt.subplot(gs[1])
-                im = ax.imshow(np.mean(montecarlo_grad, axis=0), cmap=plt.get_cmap('hot'), vmin=0, vmax=1)
+                im = ax.imshow(np.squeeze(test_img), vmin=0, vmax=1)
+                im = ax.imshow(np.mean(montecarlo_grad, axis=0), cmap=plt.get_cmap('jet'), vmin=0, vmax=1, alpha=0.5)
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
                 ax.set_aspect('equal')

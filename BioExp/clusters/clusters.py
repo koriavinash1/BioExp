@@ -147,22 +147,22 @@ class Cluster():
         return labels 
 
 
-    def plot_weights(self, labels, n = 5, save_path=None):
+    def plot_weights(self, labels, save_path=None):
         """
         dim x: k x k x in_c x out_c
         """
         shape = self.weights.shape
-
+        
+        features = []
         for label in np.unique(labels):
-            lab_idx = np.where(labels==label)[0]
-            wt_idx = np.random.choice(lab_idx, n)
-            rws = int(shape[-2]**0.5)
-            cls = rws
-
-            if not rws**2 == shape[-2]:
-                rws = rws + 1
+            wts_idx = np.where(labels==label)[0]
+            wts = self.weights[:,:,:,wts_idx].T
+            wts = wts.reshape(len(wts_idx), -1)
             
-            feature = np.zeros((shape[0]*rws, shape[1]*cls))
+            features.extend(wts)
+            features.extend(np.zeros((3, wts.shape[1])))
+            """
+            feature = np.zeros((s, shape[1]*cls))
             for ii in wt_idx:
                 wt = self.weights[:,:,:, ii]
                 for i in range(rws):
@@ -180,3 +180,19 @@ class Cluster():
                 else:
                     os.makedirs(save_path, exist_ok = True)
                     plt.savefig(os.path.join(save_path, 'cluster_{}_idx_{}.png'.format(label, ii)), bbox_inches='tight')
+            """
+            plt.clf()
+            plt.imshow(wts)
+            if not save_path:
+                plt.show()
+            else:
+                os.makedirs(save_path, exist_ok = True)
+                plt.savefig(os.path.join(save_path, 'layer_{}__concept_{}.png'.format(self.layer_idx, label)), dpi=200, bbox_inches='tight')
+        
+        plt.clf()
+        plt.imshow(features)
+        if not save_path:
+            plt.show()
+        else:
+            os.makedirs(save_path, exist_ok = True)
+            plt.savefig(os.path.join(save_path, 'layer_{}__all_concepts.png'.format(self.layer_idx)), dpi=200, bbox_inches='tight')
