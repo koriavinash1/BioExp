@@ -53,7 +53,7 @@ class EstimateTrails(object):
         r"""
         """
         if visual:
-            if (not image) or (not gt):
+            if (image.all() and gt.all()):
                 raise ValueError("improper argument fot test_img or test_gt")
                 
         ftrails = findTrails(self.root_node, start_node, end_node)
@@ -62,19 +62,28 @@ class EstimateTrails(object):
         visualtrails = []
 
         for trailidx, ntrail in enumerate(ftrails.trails):
-            trail = '(Input)'
-            traildescription = '(Input Image)'
+            trail = ''
+            traildescription = ''
             concept_imgs = []
             
             for node in ntrail:
-                trail += '  ->  ({})'.format(node.name)
-                traildescription += '  ->  ({})'.format(node.info['description'])
+
+                if node.name == end_node:
+                    trail += '  ({})  '.format(node.name)
+                    traildescription += '  ({})  '.format(node.info['description'])
+                else:
+                    trail += '  ({})  ->'.format(node.name)
+                    traildescription += '  ({})  ->'.format(node.info['description'])
+
+
                 if visual:
-                    concept_imgs.append(self.check_robustness(node.info, 
+                    if node.info['concept_name'] == 'Input Image':
+                        concept_imgs.append(image)
+                    else:
+                        concept_imgs.append(self.identifier.check_robustness(node.info, 
                                                        test_img = image,
-                                                       test_gt = gt,
                                                        save_path = None,
-                                                       nmontecarlo = 10))
+                                                       nmontecarlo = 1))
             trails.append(trail)
             trailsdescription.append(traildescription)
             visualtrails.append(concept_imgs)
@@ -83,7 +92,7 @@ class EstimateTrails(object):
             print (traildescription)
             for i, cimg in enumerate(concept_imgs):
                 plt.subplot(1, len(concept_imgs), i+1)
-                plt.imshow(cimg, cmap='jet', vmin=0, vmax=1)
+                plt.imshow(np.squeeze(cimg), cmap='jet', vmin=0, vmax=1)
                 plt.tick_params(axis='both', which='both', bottom=False, left=False, right=False, top=False, labelleft=False,labelbottom=False)
             
             if visual:

@@ -47,61 +47,100 @@ class CausalGraph():
         self.noutputs   = len(self.model.outputs)
 
             
-    def get_layer_idx(self, layer_name):
-        """
+    def _get_layer_idx_(self, layer_name):
+        r"""
         """
         for idx, layer in enumerate(self.model.layers):
             if layer.name == layer_name:
                 return idx
        
 
-    def calc_MI(self, X,Y,bins):
+    def _calc_MI_(self, X,Y,bins):
+        r"""
+        calculates normalized MI:
+        
+        NMI = 2*I(X,Y)/(H(X) + H(Y))
+        """
 
-       c_XY = np.histogram2d(X,Y,bins)[0]
-       c_X = np.histogram(X,bins)[0]
-       c_Y = np.histogram(Y,bins)[0]
 
-       H_X = self.shan_entropy(c_X)
-       H_Y = self.shan_entropy(c_Y)
-       H_XY = self.shan_entropy(c_XY)
+        c_XY = np.histogram2d(X,Y,bins)[0]
+        c_X = np.histogram(X,bins)[0]
+        c_Y = np.histogram(Y,bins)[0]
 
-       MI = H_X + H_Y - H_XY
-       return MI
+        H_X = self._shan_entropy_(c_X)
+        H_Y = self._shan_entropy_(c_Y)
+        H_XY = self._shan_entropy_(c_XY)
 
-    def shan_entropy(self, c):
+        MI = H_X + H_Y - H_XY
+        return 2.*MI/(H_X + H_Y)
+
+    def _shan_entropy_(self, c):
+        r"""
+        calculates shanan's entropy
+        
+        H(X) = E(xlog_2(x))
+        """
         c_normalized = c / float(np.sum(c))
         c_normalized = c_normalized[np.nonzero(c_normalized)]
         H = -sum(c_normalized* np.log2(c_normalized))  
         return H
         
 
-    def MI(self, distA, distB, bins=100, random=100):
+    def MI(self, distA, distB, bins=100, random=0.05):
+        r"""
+        calculates mutual information between two 
+        given distribution
+        
+        distA: tensor of any order, first axis should be sample axis (N, ...)
+        distB: same dimensionality as distA
+        bins : bins used in creating histograms
+        random: to seep up computation by randomly selecting n vectors 
+                and considers expectation
+                (% information between (0, 1])
         """
-        """
+        
+        assert distA.shape == distB.shape, 
+                "Dimensionality mismatch between two distributions"
+        
+    
         x = distA.reshape(distA.shape[0], -1)
         y = distB.reshape(distB.shape[0], -1)
 
         idxs = np.arange(x.shape[-1])
         if random:
-            idxs = np.random.choice(idxs, random)
+            idxs = np.random.choice(idxs, int(random*x.shape[-1]))
 
         mi = []
         for i in idxs:
-            mi.append(self.calc_MI(x[:, i], y[:,i], bins))
+            mi.append(self._calc_MI_(x[:, i], y[:,i], bins))
         return np.mean(mi)
         
 
-    def get_link(self, nodeA_info, nodeB_info, dataset_path, loader, max_samples = 1):
+    def get_link(self, nodeA_info, 
+                 nodeB_info, 
+                 dataset_path, 
+                 loader, m
+                 max_samples = -1):
+        r"""
+        get link information between two nodes, nodeA, nodeB
+        observation based on interventions
+        
+        𝑀𝐼(𝐶𝑞𝑗, 𝑑𝑜(𝐶𝑝𝑖=1) | 𝑑𝑜(𝐶𝑝−𝑖=0), 𝑑𝑜(𝐶𝑞−𝑗=0))>𝑇
+            
+        nodeA_info  : {'layer_name', 'filter_idxs'}
+        nodeB_info  : {'layer_name', 'filter_idxs'}
+        dataset_path: <str> root director of dataset
+        loader      : custom loader which takes image path
+                        and return both image and corresponding path
+                        simultaniously
+        max_samples : maximum number of samples required for expectation
+                         if -1 considers all images in provided root dir
         """
-            get link between two nodes, nodeA, nodeB
-            occlude at nodeA and observe changes in nodeB
-            nodeA_info    : {'layer_name', 'filter_idxs'}
-            nodeB_info    : {'layer_name', 'filter_idxs'}
-        """
+        
 
-        nodeA_idx   = self.get_layer_idx(nodeA_info['layer_name'])
+        nodeA_idx   = self._get_layer_idx_(nodeA_info['layer_name'])
         nodeA_idxs  = nodeA_info['filter_idxs']
-        nodeB_idx   = self.get_layer_idx(nodeB_info['layer_name'])
+        nodeB_idx   = self._get_layer_idx_(nodeB_info['layer_name'])
         nodeB_idxs  = nodeB_info['filter_idxs']
 
         total_filters = np.arange(np.array(self.model.layers[nodeA_idx].get_weights())[0].shape[-1])
@@ -144,6 +183,8 @@ class CausalGraph():
         predicted_distributionB = []
 
         input_paths = os.listdir(dataset_path)
+        max_samples = len(input_paths) if max_samples == -1 else max_samples
+        
         for i in range(len(input_paths) if len(input_paths) < max_samples else max_samples):
             input_, label_ = loader(os.path.join(dataset_path, input_paths[i]))
             true_distributionB.append(np.squeeze(modelT.predict(input_[None, ...])))
@@ -154,14 +195,34 @@ class CausalGraph():
         return self.MI(np.array(true_distributionB), np.array(predicted_distributionB))
 
 
-    def generate_graph(self, graph_info, dataset_path, dataloader, 
-                            edge_threshold = None, save_path = None, 
-                            verbose = False, max_samples=10):
-        """
-            graph_info: list of json: [{'layer_name',
+    def generate_graph(self, graph_info, 
+                           dataset_path, 
+                           dataloader, 
+                           edge_threshold = 0.5, 
+                           save_path = None, 
+                           verbose = True, 
+                           max_samples=10):
+        r"""
+        
+        Constructs entire concept graph based on the information provided
+        
+        
+        
+        graph_info: list of json: [{'layer_name',
                                         'filter_idxs',
                                         'concept_name',
                                         'description'}]
+        dataset_path: <str> root director of dataset
+        dataloader  : custom loader which takes image path
+                        and return both image and corresponding path
+                        simultaniously
+        edge_threshold: <float> threshold value to form an edge
+        save_path : <str> path to folder to save all the files and generated graph in .pickle
+                    format
+        verbose: <bool> provide log statements
+        max_samples : maximum number of samples required for expectation
+                         if -1 considers all images in provided root dir
+        
         """
 
         layers= []
@@ -241,8 +302,8 @@ class CausalGraph():
                 except:
                     Bexists = False
                 
-
-                print("[INFO: BioExp Graphs] Causal Relation between: {}, {}; edge weights: {}".format(nodei, 
+                if verbose:
+                    print("[INFO: BioExp Graphs] Causal Relation between: {}, {}; edge weights: {}".format(nodei, 
                                         nodej, link_info))
                 
                 if link_info > edge_threshold:

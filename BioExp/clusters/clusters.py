@@ -7,7 +7,7 @@ import os
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram
 from sklearn.cluster import AgglomerativeClustering
-
+from sklearn.metrics import silhouette_score
 
 class Cluster():
     """
@@ -29,6 +29,7 @@ class Cluster():
 
         self.model = model
         self.weights = weights_pth
+        self.model.load_weights(self.weights)
         self.layer = layer_name
         self.layer_idx = 0
         for idx, layer in enumerate(self.model.layers):
@@ -37,7 +38,7 @@ class Cluster():
         self.weights = np.array(self.model.layers[self.layer_idx].get_weights())[0]
 
 
-    def get_distances(self, X, model, mode='l2'):
+    def _get_distances_(self, X, model, mode='l2'):
         """
         """
         distances = []
@@ -88,12 +89,12 @@ class Cluster():
         return distances, weights
 
 
-    def plot_dendrogram(self, X, model, threshold=.7):
+    def _plot_dendrogram_(self, X, model, threshold=.7):
         """
         """
 
         # Create linkage matrix and then plot the dendrogram
-        distance, weight = self.get_distances(X,model)
+        distance, weight = self._get_distances_(X,model)
         linkage_matrix = np.column_stack([model.children_, distance, weight]).astype(float)
 
         threshold = threshold*np.max(distance)
@@ -102,36 +103,52 @@ class Cluster():
         splitnode = np.max(sorted_[sorted_[:, 2] > threshold][0, (0,1)])
         
         level     = np.log((-.5*splitnode)/(1.*X.shape[0]) + 1.)/np.log(.5)
-        nclusters = int(np.round((1.*X.shape[0])/(2.**level))) 
+        nclusters = int(np.round((1.*X.shape[0])/(2.**level))) - 1
         
-
-        model = AgglomerativeClustering(n_clusters=nclusters).fit(X)
-        distance, weight = self.get_distances(X, model)
+        model = AgglomerativeClustering(n_clusters=max(2, nclusters)).fit(X)
+        distance, weight = self._get_distances_(X, model)
         linkage_matrix = np.column_stack([model.children_, distance, weight]).astype(float)
         labels = model.labels_
         
-        print ("[INFO: BioExp Clustering] Layer: {}, Nclusters: {}, Labels: {}, Freq. of each labels: {}".format(self.layer, nclusters, np.unique(labels), [sum(labels == i) for i in np.unique(labels)]))
+        sil = silhouette_score(X, labels, metric='euclidean')
+        print ("[INFO: BioExp Clustering] Layer: {}, Nclusters: {}, Labels: {}, Freq. of each labels: {} Clustering Score: {}".format(self.layer, nclusters, np.unique(labels), [sum(labels == i) for i in np.unique(labels)], sil))
         # Plot the corresponding dendrogram
 
         return linkage_matrix, labels
 
 
-    def get_clusters(self, threshold=0.5, save_path = None):
+    def get_clusters(self, threshold=0.8, 
+                         normalize=False, 
+                         position=True, 
+                         save_path = None):
         """
         Does clustering on feature space
 
         save_path  : path to save dendrogram image
         threshold  : fraction of max distance to cluster 
+        normalize  : to squeeze values between 0, 1
+        position   : encode position information
         """
 
-        shape = self.weights.shape
-        X = self.weights.reshape(shape[-1], -1)
-        position = np.linspace(0, X.shape[-1], X.shape[-1])
-        X = X + position[None, :]
+        shape = np.array(self.weights.shape)
+        
+        coord = []
+        for sh in shape[:-1]:
+            coord.append(np.linspace(0, (1. if normalize else sh), sh))
+
+        distance = np.sqrt(np.sum([x**2 for x in np.meshgrid(*coord, indexing='ij')]))
+        distance = distance[..., None]
+        
+        X = self.weights
+        
+        if normalize: X = (X - np.max(X))/(np.max(X) - np.min(X))
+        if position: X = X*distance
+    
+        X = X.reshape(-1, shape[-1]).T
         model = AgglomerativeClustering().fit(X)
         
         # plot the top three levels of the dendrogram
-        linkage_matrix, labels = self.plot_dendrogram(X, model, threshold = threshold)
+        linkage_matrix, labels = self._plot_dendrogram_(X, model, threshold = threshold)
         
         plt.figure(figsize=(20, 10))
         plt.title('Hierarchical Clustering Dendrogram')
@@ -152,11 +169,11 @@ class Cluster():
         dim x: k x k x in_c x out_c
         """
         shape = self.weights.shape
-        
+        normweights = (self.weights - np.min(self.weights))/(np.max(self.weights) - np.min(self.weights))
         features = []
         for label in np.unique(labels):
             wts_idx = np.where(labels==label)[0]
-            wts = self.weights[:,:,:,wts_idx].T
+            wts = normweights[:,:,:,wts_idx].T
             wts = wts.reshape(len(wts_idx), -1)
             
             features.extend(wts)
@@ -182,7 +199,7 @@ class Cluster():
                     plt.savefig(os.path.join(save_path, 'cluster_{}_idx_{}.png'.format(label, ii)), bbox_inches='tight')
             """
             plt.clf()
-            plt.imshow(wts)
+            plt.imshow(wts, cmap='jet')
             if not save_path:
                 plt.show()
             else:
@@ -190,9 +207,9 @@ class Cluster():
                 plt.savefig(os.path.join(save_path, 'layer_{}__concept_{}.png'.format(self.layer_idx, label)), dpi=200, bbox_inches='tight')
         
         plt.clf()
-        plt.imshow(features)
+        plt.imshow(features, cmap='jet')
         if not save_path:
             plt.show()
         else:
             os.makedirs(save_path, exist_ok = True)
-            plt.savefig(os.path.join(save_path, 'layer_{}__all_concepts.png'.format(self.layer_idx)), dpi=200, bbox_inches='tight')
+            plt.savefig(os.path.join(save_path, 'layer_{}__all_concepts.png'.format(self.layer_idx)), dpi=200,  bbox_inches='tight')
