@@ -15,7 +15,7 @@ import pandas as pd
 from ..helpers.utils import *
 from ..spatial.ablation import Ablate
 
-from keras.models import Model
+from keras.models import Model, clone_model
 from keras.utils import np_utils
 from tqdm import tqdm
 from skimage.transform import resize as imresize
@@ -27,6 +27,8 @@ from scipy.stats import chi2_contingency
 
 from pgm.helpers.common import Node
 from pgm.representation.LinkedListBN import Graph
+
+EPS = np.finfo(np.float32).eps
 
 class CausalGraph():
     """
@@ -45,6 +47,7 @@ class CausalGraph():
         self.weights    = weights_pth
         self.classinfo  = classinfo
         self.noutputs   = len(self.model.outputs)
+        self.model.load_weights(self.weights)
 
             
     def _get_layer_idx_(self, layer_name):
@@ -67,11 +70,13 @@ class CausalGraph():
         c_X = np.histogram(X,bins)[0]
         c_Y = np.histogram(Y,bins)[0]
 
-        H_X = self._shan_entropy_(c_X)
-        H_Y = self._shan_entropy_(c_Y)
-        H_XY = self._shan_entropy_(c_XY)
+        H_X = self._shan_entropy_(c_X) 
+        H_Y = self._shan_entropy_(c_Y) 
+        H_XY = self._shan_entropy_(c_XY) 
+        
 
         MI = H_X + H_Y - H_XY
+
         return 2.*MI/(H_X + H_Y)
 
     def _shan_entropy_(self, c):
@@ -83,10 +88,10 @@ class CausalGraph():
         c_normalized = c / float(np.sum(c))
         c_normalized = c_normalized[np.nonzero(c_normalized)]
         H = -sum(c_normalized* np.log2(c_normalized))  
-        return H
+        return H + EPS
         
 
-    def MI(self, distA, distB, bins=100, random=0.05):
+    def MI(self, distA, distB, bins=100, random=0.10):
         r"""
         calculates mutual information between two 
         given distribution
@@ -99,10 +104,10 @@ class CausalGraph():
                 (% information between (0, 1])
         """
         
-        assert distA.shape == distB.shape, 
+        assert distA.shape == distB.shape, \
                 "Dimensionality mismatch between two distributions"
         
-    
+        
         x = distA.reshape(distA.shape[0], -1)
         y = distB.reshape(distB.shape[0], -1)
 
@@ -119,7 +124,7 @@ class CausalGraph():
     def get_link(self, nodeA_info, 
                  nodeB_info, 
                  dataset_path, 
-                 loader, m
+                 loader,
                  max_samples = -1):
         r"""
         get link information between two nodes, nodeA, nodeB
@@ -142,35 +147,33 @@ class CausalGraph():
         nodeA_idxs  = nodeA_info['filter_idxs']
         nodeB_idx   = self._get_layer_idx_(nodeB_info['layer_name'])
         nodeB_idxs  = nodeB_info['filter_idxs']
-
+        
         total_filters = np.arange(np.array(self.model.layers[nodeA_idx].get_weights())[0].shape[-1])
 
+        modelT = clone_model(self.model)
+        modelP = clone_model(self.model)
+
+        modelT = Model(inputs = modelT.input, 
+                        outputs = modelT.get_layer(nodeB_info['layer_name']).output)
+        modelP = Model(inputs = modelP.input, 
+                        outputs = modelP.get_layer(nodeB_info['layer_name']).output)
+
         #########################
-
-        modelT = Model(inputs = self.model.input, 
-                    outputs = self.model.get_layer(nodeB_info['layer_name']).output)
-        modelT.load_weights(self.weights, by_name=True)
-
         test_filters  = np.delete(total_filters, nodeA_idxs)
-        layer_weights = np.array(self.model.layers[nodeA_idx].get_weights().copy())
+        layer_weights = np.array(modelT.layers[nodeA_idx].get_weights().copy())
         occluded_weights = layer_weights.copy()
         for j in test_filters:
                 occluded_weights[0][:,:,:,j] = 0
                 try: occluded_weights[1][j] = 0
                 except: pass
         modelT.layers[nodeA_idx].set_weights(occluded_weights)
+        modelP.layers[nodeA_idx].set_weights(occluded_weights)
 
 
         #########################
-
-        modelP = Model(inputs = self.model.input, 
-                        outputs=self.model.get_layer(nodeB_info['layer_name']).output)
-        modelP.load_weights(self.weights, by_name=True)
-        modelP.layers[nodeA_idx].set_weights(occluded_weights)
-
         total_filters = np.arange(np.array(self.model.layers[nodeB_idx].get_weights())[0].shape[-1])
         test_filters  = np.delete(total_filters, nodeB_idxs)
-        layer_weights = np.array(self.model.layers[nodeB_idx].get_weights().copy())
+        layer_weights = np.array(modelP.layers[nodeB_idx].get_weights().copy())
         occluded_weights = layer_weights.copy()
         for j in test_filters:
                 occluded_weights[0][:,:,:,j] = 0
@@ -187,8 +190,10 @@ class CausalGraph():
         
         for i in range(len(input_paths) if len(input_paths) < max_samples else max_samples):
             input_, label_ = loader(os.path.join(dataset_path, input_paths[i]))
-            true_distributionB.append(np.squeeze(modelT.predict(input_[None, ...])))
-            predicted_distributionB.append(np.squeeze(modelP.predict(input_[None, ...])))
+            pre_intervened = np.squeeze(modelT.predict(input_[None, ...]))
+            post_intervened = np.squeeze(modelP.predict(input_[None, ...]))
+            true_distributionB.append(pre_intervened)
+            predicted_distributionB.append(post_intervened)
 
 
         del modelP, modelT

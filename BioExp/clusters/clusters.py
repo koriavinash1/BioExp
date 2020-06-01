@@ -7,7 +7,7 @@ import os
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram
 from sklearn.cluster import AgglomerativeClustering
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import silhouette_score, silhouette_samples
 
 class Cluster():
     """
@@ -133,14 +133,15 @@ class Cluster():
         shape = np.array(self.weights.shape)
         
         coord = []
-        for sh in shape[:-1]:
+        for sh in shape[:-2]:
             coord.append(np.linspace(0, (1. if normalize else sh), sh))
 
         distance = np.sqrt(np.sum([x**2 for x in np.meshgrid(*coord, indexing='ij')]))
         distance = distance[..., None]
         
-        X = self.weights
-        
+        X = np.mean(self.weights, axis=-2)
+        # X = self.weights
+
         if normalize: X = (X - np.max(X))/(np.max(X) - np.min(X))
         if position: X = X*distance
     
@@ -158,11 +159,59 @@ class Cluster():
         if save_path:
             os.makedirs(save_path, exist_ok=True)
             plt.savefig(os.path.join(save_path, '{}_dendrogram.png'.format(self.layer)), bbox_inches='tight')
+            self.plot_silhouette(X, labels, save_path)
         else:
             plt.show()
 
-        return labels 
+        return labels
+    
+    def plot_silhouette(self, X, labels, save_path):
+        r"""
+        """
+        fig = plt.figure()
+        fig.set_size_inches(10, 5)
+        n_clusters = len(np.unique(labels))
+        y_lower = 10
+        plt.xlim([-0.1, 0.3])
+        plt.ylim([0, len(X) + (n_clusters + 1) * 10])
+        svalues = silhouette_samples(X, labels)
+        silhouette_avg = np.mean(svalues)
 
+        for i in np.unique(labels):
+            ith_cluster_silhouette_values = svalues[labels == i]
+            ith_cluster_silhouette_values.sort()
+            
+            size_cluster_i = ith_cluster_silhouette_values.shape[0]
+            y_upper = y_lower + size_cluster_i
+
+            color = plt.cm.nipy_spectral(float(i) / n_clusters)
+            plt.fill_betweenx(np.arange(y_lower, y_upper),
+                              0, ith_cluster_silhouette_values,
+                              facecolor=color, edgecolor=color, alpha=0.7)
+
+            # Label the silhouette plots with their cluster numbers at the middle
+            plt.text(-0.05, y_lower + 0.5 * size_cluster_i, str(i))
+
+            # Compute the new y_lower for next plot
+            y_lower = y_upper + 10  # 10 for the 0 samples
+
+            # ax[idx].set_title("The silhouette plot for the various clusters.")
+            plt.xlabel("The silhouette coefficient values")
+            plt.ylabel("Cluster label")
+
+            # The vertical line for average silhouette score of all the values
+            plt.axvline(x=silhouette_avg, color="red", linestyle="--")
+
+            plt.yticks([])  # Clear the yaxis labels / ticks
+            # plt.xticks([-0.1, 0, 0.2, 0.4, 0.6, 0.8, 1])
+
+            plt.suptitle(("Silhouette analysis for KMeans clustering on sample data "
+                      "with n_clusters = %d" % n_clusters),
+                     fontsize=14, fontweight='bold')
+
+                          
+        plt.savefig(os.path.join(save_path, 'layer_{}__silhouette_score.png'.format(self.layer_idx)), dpi=200,  bbox_inches='tight')
+        
 
     def plot_weights(self, labels, save_path=None):
         """
