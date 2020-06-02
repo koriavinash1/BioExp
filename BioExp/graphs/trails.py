@@ -90,18 +90,20 @@ class EstimateTrails(object):
             print ("[INFO: BioExp Trails]" + "="*5 + " New trail " + "="*5)
             print (trail)
             print (traildescription)
-            for i, cimg in enumerate(concept_imgs):
-                plt.subplot(1, len(concept_imgs), i+1)
-                plt.imshow(np.squeeze(cimg), cmap='jet', vmin=0, vmax=1)
-                plt.tick_params(axis='both', which='both', bottom=False, left=False, right=False, top=False, labelleft=False,labelbottom=False)
-            
-            if visual:
-                if save_path:
-                    pth = os.path.join(save_path, 'SN_{}__EN_{}'.format(start_node, end_node))
-                    os.makedirs(pth, exist_ok=True)
-                    plt.savefig(os.path.join(pth, '{}.png'.format(trailidx)), bbox_inches='tight')
-                else:
-                    plt.show()
+
+        if visual:
+            for trailidx, concept_imgs in enumerate(visualtrails):
+                for i, cimg in enumerate(concept_imgs):
+                    plt.subplot(1, len(concept_imgs), i+1)
+                    plt.imshow(np.squeeze(cimg), cmap='jet', vmin=0, vmax=1)
+                    plt.tick_params(axis='both', which='both', bottom=False, left=False, right=False, top=False, labelleft=False,labelbottom=False)
                 
-                return trails, trailsdescription, visualtrails
-            return trails, trailsdescription
+                    if save_path:
+                        pth = os.path.join(save_path, 'SN_{}__EN_{}'.format(start_node, end_node))
+                        os.makedirs(pth, exist_ok=True)
+                        plt.savefig(os.path.join(pth, '{}.png'.format(trailidx)), bbox_inches='tight')
+                    else:
+                        plt.show()
+                    
+            return trails, trailsdescription, visualtrails
+        return trails, trailsdescription

@@ -91,7 +91,7 @@ class CausalGraph():
         return H + EPS
         
 
-    def MI(self, distA, distB, bins=100, random=0.10):
+    def MI(self, distA, distB, bins=100, random=0.05):
         r"""
         calculates mutual information between two 
         given distribution
