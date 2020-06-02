@@ -6,13 +6,13 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='BioExp',  
-     version='0.0.1',
+     version='0.0.3',
      author="Avinash Kori, Parth Natekar",
      author_email="koriavinash1@gmail.com, parth@smail.iitm.ac.in",
      description="Deep Learning model analysis toolbox",
      long_description=open("README.md").read(),
      long_description_content_type="text/markdown",
-     url="https://github.com/parthnatekar/BioExp",
+     url="https://github.com/koriavinash1/BioExp",
      packages=setuptools.find_packages(),
 
      install_requires = [
@@ -22,11 +22,14 @@ setuptools.setup(
          'pillow',
          'simpleITK',
          'opencv-python',
-         'tensorflow-gpu>=1.15.2',
-         'keras',
+         'tensorflow-gpu==1.14',
+         'keras==2.1.5',
          'keras-vis',
          'lucid',
-         'ppgm'
+         'tqdm',
+         'sklearn',
+         'scipy>=0.19.0',
+         'ppgm==0.0.3'
          ],
 
      classifiers=[
