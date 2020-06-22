@@ -23,9 +23,10 @@ Explaining Deep Learning Models which perform various image processing tasks in 
   - [x] Dissection based
   - [x] Flow based
 - [x] Causal Graph 
-- [ ] Inference Methods
+- [x] Inference Methods
+- [ ] Counterfactuals on Visual Trails
 - [ ] Counterfactual Generation
-- [ ] Ante-hoc methods
+- [ ] Ante-hoc methods (Meta-Causation)
 
 # Citations
 If you use BioExp, please cite our work:
