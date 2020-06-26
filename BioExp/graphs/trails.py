@@ -60,6 +60,8 @@ class EstimateTrails(object):
         trails = []
         trailsdescription = []
         visualtrails = []
+        pth = os.path.join(save_path, 'SN_{}__EN_{}'.format(start_node, end_node))
+        os.makedirs(pth, exist_ok=True)
 
         for trailidx, ntrail in enumerate(ftrails.trails):
             trail = ''
@@ -91,19 +93,17 @@ class EstimateTrails(object):
             print (trail)
             print (traildescription)
 
-        if visual:
-            for trailidx, concept_imgs in enumerate(visualtrails):
+            if visual:
                 for i, cimg in enumerate(concept_imgs):
                     plt.subplot(1, len(concept_imgs), i+1)
                     plt.imshow(np.squeeze(cimg), cmap='jet', vmin=0, vmax=1)
                     plt.tick_params(axis='both', which='both', bottom=False, left=False, right=False, top=False, labelleft=False,labelbottom=False)
                 
                     if save_path:
-                        pth = os.path.join(save_path, 'SN_{}__EN_{}'.format(start_node, end_node))
-                        os.makedirs(pth, exist_ok=True)
                         plt.savefig(os.path.join(pth, '{}.png'.format(trailidx)), bbox_inches='tight')
                     else:
                         plt.show()
-                    
+        
+        if visual:              
             return trails, trailsdescription, visualtrails
         return trails, trailsdescription

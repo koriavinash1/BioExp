@@ -152,15 +152,15 @@ class ConceptIdentification():
         self.model.load_weights(self.weights, by_name = True)
         node_idx  = self.get_layer_idx(concept_info['layer_name'])
         total_filters = np.arange(np.array(self.model.layers[node_idx].get_weights())[0].shape[-1])
-        test_filters  = np.delete(total_filters, node_idxs)
+        # test_filters  = np.delete(total_filters, node_idxs)
 
-        layer_weights = np.array(self.model.layers[node_idx].get_weights().copy())
-        occluded_weights = layer_weights.copy()
-        for j in test_filters:
-            occluded_weights[0][:,:,:,j] = 0
-            try:
-                occluded_weights[1][j] = 0
-            except: pass
+        # layer_weights = np.array(self.model.layers[node_idx].get_weights().copy())
+        # occluded_weights = layer_weights.copy()
+        # for j in test_filters:
+        #     occluded_weights[0][:,:,:,j] = 0
+        #     try:
+        #         occluded_weights[1][j] = 0
+        #     except: pass
 		
         """
         for j in node_idxs:
@@ -168,7 +168,7 @@ class ConceptIdentification():
             occluded_weights[1][j] = 1.
         """
 
-        self.model.layers[node_idx].set_weights(occluded_weights)
+        # self.model.layers[node_idx].set_weights(occluded_weights)
         model = Model(inputs = self.model.input, outputs=self.model.get_layer(concept_info['layer_name']).output)
   
         newmodel = Sequential()
