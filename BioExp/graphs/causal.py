@@ -52,7 +52,12 @@ class CausalGraph():
             
     def _get_layer_idx_(self, layer_name):
         r"""
+        given layer names returns the 
+        index corresponding to it
         """
+        if layer_name == 'output':
+            return len(self.model.layers) -1
+
         for idx, layer in enumerate(self.model.layers):
             if layer.name == layer_name:
                 return idx
@@ -64,7 +69,6 @@ class CausalGraph():
         
         NMI = 2*I(X,Y)/(H(X) + H(Y))
         """
-
 
         c_XY = np.histogram2d(X,Y,bins)[0]
         c_X = np.histogram(X,bins)[0]
@@ -79,6 +83,7 @@ class CausalGraph():
 
         return 2.*MI/(H_X + H_Y)
 
+
     def _shan_entropy_(self, c):
         r"""
         calculates shanan's entropy
@@ -91,15 +96,16 @@ class CausalGraph():
         return H + EPS
         
 
+
     def MI(self, distA, distB, bins=100, random=0.05):
         r"""
         calculates mutual information between two 
         given distribution
         
-        distA: tensor of any order, first axis should be sample axis (N, ...)
-        distB: same dimensionality as distA
-        bins : bins used in creating histograms
-        random: to seep up computation by randomly selecting n vectors 
+        distA:  <ndarray>; tensor of any order, first axis should be sample axis (N, ...)
+        distB:  <ndarray>; same dimensionality as distA
+        bins :  <int>; bins used in creating histograms
+        random: <float>; to seep up computation by randomly selecting n vectors 
                 and considers expectation
                 (% information between (0, 1])
         """
@@ -119,7 +125,8 @@ class CausalGraph():
         for i in idxs:
             mi.append(self._calc_MI_(x[:, i], y[:,i], bins))
         return np.mean(mi)
-        
+    
+
 
     def get_link(self, nodeA_info, 
                  nodeB_info, 
@@ -130,15 +137,18 @@ class CausalGraph():
         get link information between two nodes, nodeA, nodeB
         observation based on interventions
         
-        𝑀𝐼(𝐶𝑞𝑗, 𝑑𝑜(𝐶𝑝𝑖=1) | 𝑑𝑜(𝐶𝑝−𝑖=0), 𝑑𝑜(𝐶𝑞−𝑗=0))>𝑇
+        This describes the existance of directed link between 
+        nodeA -> nodeB not the other way
+
+        $$NMI(\mathbb{Q}(\Phi(x ~|~ do(C_{-i}^p = 0), do(C_{-j}^q = 0))), \mathbb{P}(\Phi(x ~|~ do(C_{-i}^p = 0)))) > T$$
             
-        nodeA_info  : {'layer_name', 'filter_idxs'}
-        nodeB_info  : {'layer_name', 'filter_idxs'}
+        nodeA_info  : <json>; {'layer_name', 'filter_idxs'}
+        nodeB_info  : <json>; {'layer_name', 'filter_idxs'}
         dataset_path: <str> root director of dataset
-        loader      : custom loader which takes image path
+        loader      : <function>; custom loader which takes image path
                         and return both image and corresponding path
                         simultaniously
-        max_samples : maximum number of samples required for expectation
+        max_samples : <int>; maximum number of samples required for expectation
                          if -1 considers all images in provided root dir
         """
         
@@ -150,59 +160,84 @@ class CausalGraph():
         
         total_filters = np.arange(np.array(self.model.layers[nodeA_idx].get_weights())[0].shape[-1])
 
-        modelT = clone_model(self.model)
-        modelP = clone_model(self.model)
+        #-------------------------------------
+        # Create duplicate models for estimating pre and post 
+        # interventional distributions
 
-        modelT = Model(inputs = modelT.input, 
-                        outputs = modelT.get_layer(nodeB_info['layer_name']).output)
-        modelP = Model(inputs = modelP.input, 
-                        outputs = modelP.get_layer(nodeB_info['layer_name']).output)
+        model_pre = clone_model(self.model)
+        model_post = clone_model(self.model)
 
-        #########################
+
+        if not nodeB_info['layer_name'] == 'output':
+            model_pre = Model(inputs = model_pre.input, 
+                            outputs = model_pre.get_layer(nodeB_info['layer_name']).output)
+            model_post = Model(inputs = model_post.input, 
+                            outputs = model_post.get_layer(nodeB_info['layer_name']).output)
+
+        #-------------------------------------
+        # Occluding layer p weights
+
         test_filters  = np.delete(total_filters, nodeA_idxs)
-        layer_weights = np.array(modelT.layers[nodeA_idx].get_weights().copy())
+        layer_weights = np.array(model_pre.layers[nodeA_idx].get_weights().copy())
         occluded_weights = layer_weights.copy()
         for j in test_filters:
-                occluded_weights[0][:,:,:,j] = 0
-                try: occluded_weights[1][j] = 0
-                except: pass
-        modelT.layers[nodeA_idx].set_weights(occluded_weights)
-        modelP.layers[nodeA_idx].set_weights(occluded_weights)
+            occluded_weights[0][:,:,:,j] = 0
+            try: occluded_weights[1][j] = 0
+            except: pass
+        model_pre.layers[nodeA_idx].set_weights(occluded_weights)
+        model_post.layers[nodeA_idx].set_weights(occluded_weights)
 
 
-        #########################
+        #--------------------------------------
+        # Occluding layer q weights
+
         total_filters = np.arange(np.array(self.model.layers[nodeB_idx].get_weights())[0].shape[-1])
         test_filters  = np.delete(total_filters, nodeB_idxs)
-        layer_weights = np.array(modelP.layers[nodeB_idx].get_weights().copy())
+        layer_weights = np.array(model_post.layers[nodeB_idx].get_weights().copy())
         occluded_weights = layer_weights.copy()
         for j in test_filters:
-                occluded_weights[0][:,:,:,j] = 0
-                try: occluded_weights[1][j] = 0
-                except: pass
-        modelP.layers[nodeB_idx].set_weights(occluded_weights)
+            occluded_weights[0][:,:,:,j] = 0
+            try: occluded_weights[1][j] = 0
+            except: pass
+        model_post.layers[nodeB_idx].set_weights(occluded_weights)
 
-        #########################
-        true_distributionB = []
-        predicted_distributionB = []
+
+        #--------------------------------------
+        # Distribution Estimation
+
+        pre_distribution = []
+        post_distribution = []
 
         input_paths = os.listdir(dataset_path)
         max_samples = len(input_paths) if max_samples == -1 else max_samples
         
         for i in range(len(input_paths) if len(input_paths) < max_samples else max_samples):
             input_, label_ = loader(os.path.join(dataset_path, input_paths[i]))
-            pre_intervened = np.squeeze(modelT.predict(input_[None, ...]))
-            post_intervened = np.squeeze(modelP.predict(input_[None, ...]))
-            true_distributionB.append(pre_intervened)
-            predicted_distributionB.append(post_intervened)
+            pre_intervened = np.squeeze(model_pre.predict(input_[None, ...]))
+            post_intervened = np.squeeze(model_post.predict(input_[None, ...]))
+            pre_distribution.append(pre_intervened)
+            post_distribution.append(post_intervened)
 
 
-        del modelP, modelT
-        return self.MI(np.array(true_distributionB), np.array(predicted_distributionB))
+        del model_post, model_pre
+
+        # numpification
+        pre_distribution = np.array(pre_distribution)
+        post_distribution = np.array(post_distribution)
+
+        if not nodeB_info['layer_name'] == 'output':
+            return self.MI(pre_distribution, post_distribution)
+        else:
+            return np.argmax(np.mean(post_distribution, 
+                                    axis=tuple(np.delete(np.arange(len(post_distribution.shape)), 
+                                            [1]))))
 
 
     def generate_graph(self, graph_info, 
                            dataset_path, 
                            dataloader, 
+                           nclasses = 2,
+                           type     = 'segmentation',
                            edge_threshold = 0.5, 
                            save_path = None, 
                            verbose = True, 
@@ -213,22 +248,27 @@ class CausalGraph():
         
         
         
-        graph_info: list of json: [{'layer_name',
+        graph_info: <list[json]>; [{'layer_name',
                                         'filter_idxs',
                                         'concept_name',
                                         'description'}]
-        dataset_path: <str> root director of dataset
-        dataloader  : custom loader which takes image path
+        dataset_path: <str>; root director of dataset
+        dataloader: <function>; custom loader which takes image path
                         and return both image and corresponding path
                         simultaniously
-        edge_threshold: <float> threshold value to form an edge
-        save_path : <str> path to folder to save all the files and generated graph in .pickle
+        nclasses: <int>; number of classes pixel wise or data wise
+        type: <str>; one among ['segmentation', 'classification'] 
+        edge_threshold: <float>; threshold value to form an edge
+        save_path: <str>; path to folder to save all the files and generated graph in .pickle
                     format
-        verbose: <bool> provide log statements
-        max_samples : maximum number of samples required for expectation
+        verbose: <bool>; provide log statements
+        max_samples: <int>; maximum number of samples required for expectation
                          if -1 considers all images in provided root dir
         
         """
+
+        # -------------------------------
+        # seperating lists from json
 
         layers= []
         filter_idxs =[]
@@ -258,7 +298,9 @@ class CausalGraph():
                 
         node_indexing = np.array(node_indexing)
         node_ordering = np.array(node_ordering)
-        
+
+        # -----------------------------------
+
         rootNode = Node('Input')
         rootNode.info = {'concept_name': 'Input Image',
                             'layer_name': 'Placeholder',
@@ -324,7 +366,40 @@ class CausalGraph():
                         pass
 
 
-            self.causal_BN.print(rootNode)
+            #--------------------------------
+            # final class nodes
+            if ii == (len(layer_names) - 1):
+                for ci in range(nclasses):
+                    nodej = 'class' + str(ci)
+                    nodej_info = {'concept_name': nodej, 
+                                'layer_name': 'output', 
+                                'filter_idxs': [],
+                                'description': 'Output node Class_{}'.format(ci)}
+                    link_info = self.get_link(nodei_info,
+                                            nodej_info,
+                                            dataset_path = dataset_path,
+                                            loader = dataloader,
+                                            max_samples = max_samples)
+                    try:
+                        nodej =self.causal_BN.get_node(ci)
+                        Bexists = True
+                        self.causal_BN.current_node.info = nodej_info
+                    except:
+                        Bexists = False
+
+                    if ci == link_info:
+                        if Aexists:
+                            if not Bexists:
+                                self.causal_BN.add_node(nodej,
+                                            parentNodes = [nodei])
+                                self.causal_BN.get_node(nodej)
+                                self.causal_BN.current_node.info = nodej_info
+                            else:
+                                self.causal_BN.add_edge(nodei, nodej)
+                        else:
+                            pass
+
+            if verbose: self.causal_BN.print(rootNode)
 
         os.makedirs(save_path, exist_ok=True)
         pickle.dump({'graph': self.causal_BN, 'rootNode': rootNode}, 
