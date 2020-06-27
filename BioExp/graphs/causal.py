@@ -228,9 +228,9 @@ class CausalGraph():
         if not nodeB_info['layer_name'] == 'output':
             return self.MI(pre_distribution, post_distribution)
         else:
-            return np.argmax(np.mean(post_distribution, 
-                                    axis=tuple(np.delete(np.arange(len(post_distribution.shape)), 
-                                            [1]))))
+            return np.mean(post_distribution, 
+                                axis=tuple(np.delete(np.arange(len(post_distribution.shape)), 
+                                        [1])))
 
 
     def generate_graph(self, graph_info, 
@@ -380,8 +380,17 @@ class CausalGraph():
                                             dataset_path = dataset_path,
                                             loader = dataloader,
                                             max_samples = max_samples)
+
+                    if type.lower() == 'segmentation':
+                        link_info = np.argmax(link_info[1:]) # removing background class
+                    elif type.lower() == 'classification':
+                        link_info = np.argmax(link_info)
+                    else:
+                        raise NotImplementedError("[INFO: BioExp Graphs] allowed types are ['segmentation', 'classification']")
+
+
                     try:
-                        nodej =self.causal_BN.get_node(ci)
+                        nodej = self.causal_BN.get_node(ci)
                         Bexists = True
                         self.causal_BN.current_node.info = nodej_info
                     except:
