@@ -100,7 +100,7 @@ class Cluster():
         threshold = threshold*np.max(distance)
         
         sorted_   = linkage_matrix[np.argsort(distance)]
-        splitnode = np.max(sorted_[sorted_[:, 2] > threshold][0, (0,1)])
+        splitnode = np.max(sorted_[sorted_[:, 2] >= threshold][0, (0,1)])
         
         level     = np.log((-.5*splitnode)/(1.*X.shape[0]) + 1.)/np.log(.5)
         nclusters = int(np.round((1.*X.shape[0])/(2.**level))) - 1

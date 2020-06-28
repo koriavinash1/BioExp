@@ -1,5 +1,6 @@
 import matplotlib
 matplotlib.use('Agg')
+
 import keras
 import numpy as np
 import tensorflow as tf
@@ -273,30 +274,27 @@ class CausalGraph():
         layers= []
         filter_idxs =[]
         concept_names=[]
-        descp =[]
+        descp = []
+        node_indexing = []
         for cinfo in graph_info:
             layers.append(cinfo['layer_name'])
             filter_idxs.append(cinfo['filter_idxs'])
             concept_names.append(cinfo['concept_name'])
             descp.append(cinfo['description'])
-        
-        layers=np.array(layers); filter_idxs=np.array(filter_idxs);
-        concept_names=np.array(concept_names); descp=np.array(descp);
-                
+            node_indexing.append(cinfo['node_order'])
+
+        layers = np.array(layers); filter_idxs = np.array(filter_idxs);
+        concept_names = np.array(concept_names); descp = np.array(descp);
+        node_indexing = np.array(node_indexing)    
+
         if not edge_threshold:
             raise ValueError("Assign proper edge threshold")
 
-        layer_names  = np.unique(layers)
-        layer_names  = layer_names[np.argsort([int(idx.split('_')[-1]) for idx in layer_names])]
 
         node_ordering = []
-        node_indexing = []
-
-        for i in range(len(layer_names)):
-            node_ordering.extend(concept_names[layers == layer_names[i]])
-            node_indexing.extend([i]*sum(layers == layer_names[i]))
+        for i in np.sort(np.unique(node_indexing)):
+            node_ordering.extend(concept_names[node_indexing == i])
                 
-        node_indexing = np.array(node_indexing)
         node_ordering = np.array(node_ordering)
 
         # -----------------------------------
@@ -321,7 +319,7 @@ class CausalGraph():
             except:
                 Aexists = False
 
-            if nodei_info['layer_name'] == layer_names[0]:
+            if idxi == 0:
                 self.causal_BN.add_node(nodei, parentNodes = ['Input'])
                 self.causal_BN.get_node(nodei)
                 self.causal_BN.current_node.info = nodei_info
@@ -368,7 +366,7 @@ class CausalGraph():
 
             #--------------------------------
             # final class nodes
-            if ii == (len(layer_names) - 1):
+            if idxi == (len(layer_names) - 1):
                 for ci in range(nclasses):
                     nodej = 'class' + str(ci)
                     nodej_info = {'concept_name': nodej, 

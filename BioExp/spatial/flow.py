@@ -31,7 +31,7 @@ def singlelayercam(model, img,
     layer_dice = np.zeros((1, nclasses))
     layer_info = np.zeros((1, nclasses))
     if save_path:
-        plt.figure(figsize=(10*nclasses, 10))
+        plt.figure(figsize=(5*nclasses, 5))
         gs = gridspec.GridSpec(1, nclasses)
         gs.update(wspace=0.025, hspace=0.05)
     

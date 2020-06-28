@@ -37,7 +37,7 @@ class ConceptIdentification():
         layer_name : intermediate layer name which needs to be analysed
     """
 
-    def __init__(self, model, weights_pth, metric, nclasses=4):
+    def __init__(self, model, weights_pth, metric= None, nclasses=4):
 
         self.model       = model
         self.metric      = metric
@@ -64,7 +64,7 @@ class ConceptIdentification():
             save_path : path to save an image
         """
 
-        plt.figure(figsize=(15, 15))
+        plt.figure(figsize=(5, 5))
         gs = gridspec.GridSpec(nrows, ncols)
         gs.update(wspace=0.025, hspace=0.05)
         
@@ -152,15 +152,15 @@ class ConceptIdentification():
         self.model.load_weights(self.weights, by_name = True)
         node_idx  = self.get_layer_idx(concept_info['layer_name'])
         total_filters = np.arange(np.array(self.model.layers[node_idx].get_weights())[0].shape[-1])
-        # test_filters  = np.delete(total_filters, node_idxs)
+        test_filters  = np.delete(total_filters, node_idxs)
 
-        # layer_weights = np.array(self.model.layers[node_idx].get_weights().copy())
-        # occluded_weights = layer_weights.copy()
-        # for j in test_filters:
-        #     occluded_weights[0][:,:,:,j] = 0
-        #     try:
-        #         occluded_weights[1][j] = 0
-        #     except: pass
+        layer_weights = np.array(self.model.layers[node_idx].get_weights().copy())
+        occluded_weights = layer_weights.copy()
+        for j in test_filters:
+            occluded_weights[0][:,:,:,j] = 0
+            try:
+                occluded_weights[1][j] = 0
+            except: pass
 		
         """
         for j in node_idxs:
@@ -168,7 +168,7 @@ class ConceptIdentification():
             occluded_weights[1][j] = 1.
         """
 
-        # self.model.layers[node_idx].set_weights(occluded_weights)
+        self.model.layers[node_idx].set_weights(occluded_weights)
         model = Model(inputs = self.model.input, outputs=self.model.get_layer(concept_info['layer_name']).output)
   
         newmodel = Sequential()
@@ -306,7 +306,7 @@ class ConceptIdentification():
         if save_path:
             plt.clf()
             if save_all:
-                plt.figure(figsize=(10*(nmontecarlo + 1), 10))
+                plt.figure(figsize=(5*(nmontecarlo + 1), 5))
                 gs = gridspec.GridSpec(1, nmontecarlo + 1)
                 gs.update(wspace=0.025, hspace=0.05)
 
@@ -329,7 +329,7 @@ class ConceptIdentification():
                     ax.set_title('sampled')
                     ax.tick_params(bottom='off', top='off', labelbottom='off')
             else:
-                plt.figure(figsize=(10*(2), 10))
+                plt.figure(figsize=(5*(2), 5))
                 gs = gridspec.GridSpec(1, 2)
                 gs.update(wspace=0.025, hspace=0.05)
 
