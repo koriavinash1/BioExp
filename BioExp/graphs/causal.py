@@ -366,7 +366,7 @@ class CausalGraph():
 
             #--------------------------------
             # final class nodes
-            if idxi == (len(layer_names) - 1):
+            if idxi == (len(np.unique(layers)) - 1):
                 for ci in range(nclasses):
                     nodej = 'class' + str(ci)
                     nodej_info = {'concept_name': nodej, 
