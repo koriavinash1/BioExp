@@ -182,7 +182,7 @@ class CausalGraph():
         layer_weights = np.array(model_pre.layers[nodeA_idx].get_weights().copy())
         occluded_weights = layer_weights.copy()
         for j in test_filters:
-            occluded_weights[0][:,:,:,j] = 0
+            occluded_weights[0][...,j] = 0
             try: occluded_weights[1][j] = 0
             except: pass
         model_pre.layers[nodeA_idx].set_weights(occluded_weights)
@@ -197,7 +197,7 @@ class CausalGraph():
         layer_weights = np.array(model_post.layers[nodeB_idx].get_weights().copy())
         occluded_weights = layer_weights.copy()
         for j in test_filters:
-            occluded_weights[0][:,:,:,j] = 0
+            occluded_weights[0][...,j] = 0
             try: occluded_weights[1][j] = 0
             except: pass
         model_post.layers[nodeB_idx].set_weights(occluded_weights)
@@ -364,47 +364,53 @@ class CausalGraph():
                         pass
 
 
-            #--------------------------------
-            # final class nodes
-            if idxi == (len(np.unique(layers)) - 1):
-                for ci in range(nclasses):
-                    nodej = 'class' + str(ci)
-                    nodej_info = {'concept_name': nodej, 
-                                'layer_name': 'output', 
-                                'filter_idxs': [],
-                                'description': 'Output node Class_{}'.format(ci)}
-                    link_info = self.get_link(nodei_info,
-                                            nodej_info,
-                                            dataset_path = dataset_path,
-                                            loader = dataloader,
-                                            max_samples = max_samples)
+        #--------------------------------
+        # final class nodes
+        print ("[INFO: BioExp Graphs] leaf node addition]")
+        
+        for nodei in self.causal_BN.get_leafnodes:
 
-                    if type.lower() == 'segmentation':
-                        link_info = np.argmax(link_info[1:]) # removing background class
-                    elif type.lower() == 'classification':
-                        link_info = np.argmax(link_info)
-                    else:
-                        raise NotImplementedError("[INFO: BioExp Graphs] allowed types are ['segmentation', 'classification']")
+            # dummy initialization of nodej
+            nodej = 'class' + str(ci)
+            nodej_info = {'concept_name': nodej, 
+                        'layer_name': 'output', 
+                        'filter_idxs': [],
+                        'description': 'Output node Class_{}'.format(ci)}
+
+            link_info = self.get_link(nodei.info,
+                                    nodej_info,
+                                    dataset_path = dataset_path,
+                                    loader = dataloader,
+                                    max_samples = max_samples)
+
+            if type.lower() == 'segmentation':
+                link_info = np.argmax(link_info[1:]) + 1# removing background class
+            elif type.lower() == 'classification':
+                link_info = np.argmax(link_info)
+            else:
+                raise NotImplementedError("[INFO: BioExp Graphs] allowed types are ['segmentation', 'classification']")
 
 
-                    try:
-                        nodej = self.causal_BN.get_node(ci)
-                        Bexists = True
-                        self.causal_BN.current_node.info = nodej_info
-                    except:
-                        Bexists = False
+            nodej = 'class'+ str(link_info)
+            nodej_info['concept_name'] = 'class'+str(link_info)
+            
+            try:
+                nodej = self.causal_BN.get_node(ci)
+                Bexists = True
+                self.causal_BN.current_node.info = nodej_info
+            except:
+                Bexists = False
 
-                    if ci == link_info:
-                        if Aexists:
-                            if not Bexists:
-                                self.causal_BN.add_node(nodej,
-                                            parentNodes = [nodei])
-                                self.causal_BN.get_node(nodej)
-                                self.causal_BN.current_node.info = nodej_info
-                            else:
-                                self.causal_BN.add_edge(nodei, nodej)
-                        else:
-                            pass
+            if Aexists:
+                if not Bexists:
+                    self.causal_BN.add_node(nodej,
+                                parentNodes = [nodei.name])
+                    self.causal_BN.get_node(nodej)
+                    self.causal_BN.current_node.info = nodej_info
+                else:
+                    self.causal_BN.add_edge(nodei, nodej)
+            else:
+                pass
 
             if verbose: self.causal_BN.print(rootNode)
 

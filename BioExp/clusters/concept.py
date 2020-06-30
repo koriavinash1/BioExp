@@ -279,7 +279,7 @@ class ConceptIdentification():
                         nclasses = 1, 
                         name  = concept_info['concept_name'], 
                         st_layer_idx = -1, 
-                        end_layer_idx = 1,
+                        end_layer_idx = -2,
                         threshold = 0.5)
             gradlist.append(nclass_grad[0])
 	

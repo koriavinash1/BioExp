@@ -29,7 +29,7 @@ setuptools.setup(
          'tqdm',
          'sklearn',
          'scipy>=0.19.0',
-         'ppgm==0.0.3'
+         'ppgm==0.0.4'
          ],
 
      classifiers=[
