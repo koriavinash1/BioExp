@@ -129,6 +129,75 @@ class CausalGraph():
     
 
 
+    def get_classlink(self, node_info,
+                        dataset_path,
+                        loader,
+                        max_samples=-1):
+        r"""
+        get link information between two nodes, nodeA, nodeB
+        observation based on interventions
+        
+        This describes the existance of directed link between 
+        nodeA -> nodeB not the other way
+
+            
+        node_info  : <json>; {'layer_name', 'filter_idxs'}
+        dataset_path: <str> root director of dataset
+        loader      : <function>; custom loader which takes image path
+                        and return both image and corresponding path
+                        simultaniously
+        max_samples : <int>; maximum number of samples required for expectation
+                         if -1 considers all images in provided root dir
+        """
+        
+
+        node_idx   = self._get_layer_idx_(node_info['layer_name'])
+        node_idxs  = nodeA_info['filter_idxs']
+        total_filters = np.arange(np.array(self.model.layers[node_idx].get_weights())[0].shape[-1])
+
+        #-------------------------------------
+        # Create duplicate models for estimating pre and post 
+        # interventional distributions
+
+        model = clone_model(self.model)
+
+        #-------------------------------------
+        # Occluding layer p weights
+
+        test_filters  = np.delete(total_filters, node_idxs)
+        layer_weights = np.array(model.layers[node_idx].get_weights().copy())
+        occluded_weights = layer_weights.copy()
+        for j in test_filters:
+            occluded_weights[0][...,j] = 0
+            try: occluded_weights[1][j] = 0
+            except: pass
+        model.layers[node_idx].set_weights(occluded_weights)
+
+
+        #--------------------------------------
+        # Distribution Estimation
+
+        distribution = []
+
+        input_paths = os.listdir(dataset_path)
+        max_samples = len(input_paths) if max_samples == -1 else max_samples
+        
+        for i in range(len(input_paths) if len(input_paths) < max_samples else max_samples):
+            input_, label_ = loader(os.path.join(dataset_path, input_paths[i]))
+            intervened = np.squeeze(model.predict(input_[None, ...]))
+            distribution.append(intervened)
+
+
+        del model
+
+        # numpification
+        distribution = np.array(distribution)
+
+        return np.mean(distribution, 
+                        axis=tuple(np.delete(np.arange(len(distribution.shape)), 
+                                        [1])))
+
+
     def get_link(self, nodeA_info, 
                  nodeB_info, 
                  dataset_path, 
@@ -169,11 +238,10 @@ class CausalGraph():
         model_post = clone_model(self.model)
 
 
-        if not nodeB_info['layer_name'] == 'output':
-            model_pre = Model(inputs = model_pre.input, 
-                            outputs = model_pre.get_layer(nodeB_info['layer_name']).output)
-            model_post = Model(inputs = model_post.input, 
-                            outputs = model_post.get_layer(nodeB_info['layer_name']).output)
+        model_pre = Model(inputs = model_pre.input, 
+                        outputs = model_pre.get_layer(nodeB_info['layer_name']).output)
+        model_post = Model(inputs = model_post.input, 
+                        outputs = model_post.get_layer(nodeB_info['layer_name']).output)
 
         #-------------------------------------
         # Occluding layer p weights
@@ -226,12 +294,8 @@ class CausalGraph():
         pre_distribution = np.array(pre_distribution)
         post_distribution = np.array(post_distribution)
 
-        if not nodeB_info['layer_name'] == 'output':
-            return self.MI(pre_distribution, post_distribution)
-        else:
-            return np.mean(post_distribution, 
-                                axis=tuple(np.delete(np.arange(len(post_distribution.shape)), 
-                                        [1])))
+        return self.MI(pre_distribution, post_distribution)
+
 
 
     def generate_graph(self, graph_info, 
@@ -267,6 +331,8 @@ class CausalGraph():
                          if -1 considers all images in provided root dir
         
         """
+        if not type.lower() in ['segmentation', 'classification']: 
+            raise NotImplementedError("[INFO: BioExp Graphs] allowed types are ['segmentation', 'classification']")
 
         # -------------------------------
         # seperating lists from json
@@ -368,40 +434,36 @@ class CausalGraph():
         # final class nodes
         print ("[INFO: BioExp Graphs] leaf node addition]")
         
-        for nodei in self.causal_BN.get_leafnodes:
-
-            # dummy initialization of nodej
-            nodej = 'class' + str(ci)
-            nodej_info = {'concept_name': nodej, 
-                        'layer_name': 'output', 
-                        'filter_idxs': [],
-                        'description': 'Output node Class_{}'.format(ci)}
-
+        for nodei in self.causal_BN.get_leafnodes():
+           
             link_info = self.get_link(nodei.info,
-                                    nodej_info,
                                     dataset_path = dataset_path,
                                     loader = dataloader,
                                     max_samples = max_samples)
 
             if type.lower() == 'segmentation':
-                link_info = np.argmax(link_info[1:]) + 1# removing background class
+                class_ = np.argmax(link_info[1:]) + 1# removing background class
             elif type.lower() == 'classification':
-                link_info = np.argmax(link_info)
+                class_ = np.argmax(link_info)
             else:
                 raise NotImplementedError("[INFO: BioExp Graphs] allowed types are ['segmentation', 'classification']")
 
 
-            nodej = 'class'+ str(link_info)
-            nodej_info['concept_name'] = 'class'+str(link_info)
-            
-            try:
-                nodej = self.causal_BN.get_node(ci)
-                Bexists = True
-                self.causal_BN.current_node.info = nodej_info
-            except:
-                Bexists = False
+            for cls_ in np.arange(nclasses)[link_info == link_info[class_]]:
 
-            if Aexists:
+                nodej = 'class' + str(cls_)
+                nodej_info = {'concept_name': nodej, 
+                            'layer_name': 'output', 
+                            'filter_idxs': [],
+                            'description': 'Output node Class_{}'.format(cls_)}
+                
+                try:
+                    nodej = self.causal_BN.get_node(nodej)
+                    Bexists = True
+                    self.causal_BN.current_node.info = nodej_info
+                except:
+                    Bexists = False
+
                 if not Bexists:
                     self.causal_BN.add_node(nodej,
                                 parentNodes = [nodei.name])
@@ -409,8 +471,6 @@ class CausalGraph():
                     self.causal_BN.current_node.info = nodej_info
                 else:
                     self.causal_BN.add_edge(nodei, nodej)
-            else:
-                pass
 
             if verbose: self.causal_BN.print(rootNode)
 
