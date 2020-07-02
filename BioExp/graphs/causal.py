@@ -152,7 +152,7 @@ class CausalGraph():
         
 
         node_idx   = self._get_layer_idx_(node_info['layer_name'])
-        node_idxs  = nodeA_info['filter_idxs']
+        node_idxs  = node_info['filter_idxs']
         total_filters = np.arange(np.array(self.model.layers[node_idx].get_weights())[0].shape[-1])
 
         #-------------------------------------
@@ -172,7 +172,6 @@ class CausalGraph():
             try: occluded_weights[1][j] = 0
             except: pass
         model.layers[node_idx].set_weights(occluded_weights)
-
 
         #--------------------------------------
         # Distribution Estimation
@@ -436,7 +435,7 @@ class CausalGraph():
         
         for nodei in self.causal_BN.get_leafnodes():
            
-            link_info = self.get_link(nodei.info,
+            link_info = self.get_classlink(nodei.info,
                                     dataset_path = dataset_path,
                                     loader = dataloader,
                                     max_samples = max_samples)
