@@ -82,7 +82,7 @@ def _gradCAM_(model, seed_input, start_layer, end_layer, cls=0, normalize = Fals
     if cam_max != 0: 
         cam = cam / cam_max
     return cam
-    
+
 
 def visualize_cam(model, 
                 st_layer_idx, 
@@ -92,6 +92,21 @@ def visualize_cam(model,
                 backprop_modifier = None):
 
     r"""
+        generated class activation map as proposed in:
+        https://arxiv.org/abs/1610.02391
+
+         gradient will be taken as followes:
+            $$\frac{\partial model[penultimate_layer_idx]}{\partial model[st_layer_idx]}$$
+
+        variable names are taken from keras-vis
+        
+        model: <keras model>; keras trained model
+        st_layer_idx: <int>; layer index
+        filter_indices: <list>; list of class idx used in analysis
+        penultimate_layer_idx: <int>; layer index
+        seep_input: <ndarray>; input image with batch axis
+        backprop_modifier: <None or str>; None by default, allowed ['guided'] 
+
     """
 
     CAM = _gradCAM_(model, seed_input, st_layer_idx, penultimate_layer_idx, filter_indices)
