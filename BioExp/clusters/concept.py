@@ -136,7 +136,8 @@ class ConceptIdentification():
 
     def flow_based_identifier(self, concept_info, 
                             save_path, 
-                            test_img):
+                            test_img,
+                            base_grad=False):
         """
             test significance of each concepts
 
@@ -169,26 +170,29 @@ class ConceptIdentification():
         """
 
         self.model.layers[node_idx].set_weights(occluded_weights)
-        model = Model(inputs = self.model.input, outputs=self.model.get_layer(concept_info['layer_name']).output)
+        features = self.model.get_layer(concept_info['layer_name']).output
+        exp_features = layers.Conv2D(1,1, name='Expectation')(features)
+        model = Model(inputs = self.model.input, outputs=exp_features)
   
-        newmodel = Sequential()
-        newmodel.add(model)
-        newmodel.add(layers.Conv2D(1,1))
+        # newmodel = Sequential()
+        # newmodel.add(model)
+        # newmodel.add()
         
+        # print (model.summary())
         # for ii in range(len(self.model.layers)):
         #    newmodel.layers[ii].set_weights(self.model.layers[ii].get_weights())
-        newmodel.layers[-1].set_weights((np.ones((1, 1, len(total_filters), 1)), np.ones(1)))
+        model.layers[-1].set_weights((np.ones((1, 1, len(total_filters), 1)), np.ones(1)))
 
-        grad = singlelayercam(newmodel, test_img, 
+        grad = singlelayercam(model, test_img, 
                         nclasses = 1, 
                         save_path = save_path, 
                         name  = concept_info['concept_name'], 
                         st_layer_idx = -1, 
-                        end_layer_idx = 1,
+                        end_layer_idx = -2,
                         threshold = 0.5)
         print ("[INFO: BioExp Concept Identification] Identified Concept {} in layer {}".format(concept_info['concept_name'], layer_name))
 
-        del model, newmodel
+        del model
         return grad[0]
 
 

@@ -18,6 +18,13 @@ from tensorflow.python.framework import ops
 normalize = lambda x: (x + K.epsilon()) / (K.sqrt(K.mean(K.square(x))) + K.epsilon())
 
 def denormalize(x):
+    r"""
+        Denormalize the image values
+
+        converts the range of image intensity 
+        values from (0,1) to (0, 255)
+
+    """
     x = ((x-x.mean())/(x.std()+K.epsilon())*0.25) + 0.5
     x = np.clip(x, 0, 1)
     x *= 255

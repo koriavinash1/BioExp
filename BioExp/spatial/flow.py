@@ -59,7 +59,8 @@ def singlelayercam(model, img,
     return np.array(nclass_grad)
 
 
-def cam(model, img, gt, 
+def cam(model, img, 
+    gt = None, 
     nclasses = 2, 
     save_path = None, 
     layer_idx = -1, 
