@@ -163,12 +163,7 @@ class ConceptIdentification():
                 try:
                     occluded_weights[1][j] = 0
                 except: pass
-    		
-            """
-            for j in node_idxs:
-                occluded_weights[0][:,:,:,j] = 1.
-                occluded_weights[1][j] = 1.
-            """
+
 
             self.model.layers[node_idx].set_weights(occluded_weights)
 
@@ -186,7 +181,7 @@ class ConceptIdentification():
                         save_path = save_path, 
                         name  = concept_info['concept_name'], 
                         st_layer_idx = -1, 
-                        end_layer_idx = -2,
+                        end_layer_idx = 1 if (len(model.layers) -3) < 0 else -3,
                         threshold = 0.5)
         print ("[INFO: BioExp Concept Identification] Identified Concept {} in layer {}".format(concept_info['concept_name'], layer_name))
 
@@ -196,15 +191,18 @@ class ConceptIdentification():
 
     def _gaussian_sampler_(self, data, size, ax=-1):
         shape = np.mean(data, ax).shape + (size,)
-        return lambda: np.std(data, -1)[..., None] * np.random.randn(*list(shape)) + np.mean(data, -1)[..., None] # np.random.normal(loc=np.mean(data, axis=ax), scale=np.std(data, axis=ax), size=size)
+        # np.random.normal(loc=np.mean(data, axis=ax), scale=np.std(data, axis=ax), size=size)
+        return lambda: np.std(data, -1)[..., None] * np.random.randn(*list(shape)) + np.mean(data, -1)[..., None] 
 
     def _uniform_sampler_(self, data, size, ax=-1):
         shape = np.mean(data, ax).shape + (size,)
-        return lambda: np.random.uniform(np.min(data, axis=-1)[..., None], np.max(data, axis=-1)[..., None], size = size)
+        return lambda: np.random.uniform(np.percentile(data, 0, -1)[..., None], np.percentile(data, 100, -1)[..., None], size = shape)
 
-    def concept_distribution(self, concept_info):
-        """
-            concept_info: {'concept_name', 'layer_name', 'filter_idxs'}
+    def concept_distribution(self, concept_info, prior='gaussian'):
+        r"""
+            concept_info: {'concept_name', 
+                            'layer_name', 
+                            'filter_idxs'}
 
             return: weight_sampler, bias_sampler
         """
@@ -217,21 +215,34 @@ class ConceptIdentification():
 
         layer_weights = np.array(self.model.layers[node_idx].get_weights().copy())
         concept_weights = layer_weights[0][:,:,:, node_idxs]
-        try:
-            concept_biases  = layer_weights[1][node_idxs]
-            return (self._gaussian_sampler_(concept_weights, len(node_idxs)), self._gaussian_sampler(concept_biases, len(node_idxs)))
-        except:
-            return (self._gaussian_sampler_(concept_weights, len(node_idxs)))
+
+        if prior == 'gaussian':
+            try:
+                concept_biases  = layer_weights[1][node_idxs]
+                return (self._gaussian_sampler_(concept_weights, len(node_idxs)), self._gaussian_sampler(concept_biases, len(node_idxs)))
+            except:
+                return (self._gaussian_sampler_(concept_weights, len(node_idxs)))
+        elif prior == 'uniform':
+            try:
+                concept_biases  = layer_weights[1][node_idxs]
+                return (self._uniform_sampler_(concept_weights, len(node_idxs)), self._gaussian_sampler(concept_biases, len(node_idxs)))
+            except: 
+                return (self._uniform_sampler_(concept_weights, len(node_idxs)))
+        else:
+            raise NotImplementedError("Allowed Priors are ['gaussian', 'uniform']")
 
 
     def concept_robustness(self, concept_info,
                             test_img,
-                            nmontecarlo=3,
+                            nmontecarlo = 3,
+                            base = False,
                             prior = 'gaussian'):
-        """
+        r"""
             test significance of each concepts
 
-            concept: {'concept_name', layer_name', 'filter_idxs'}
+            concept: {'concept_name', 
+                        'layer_name', 
+                        'filter_idxs'}
             dataset_path: 
             save_path:
             loader:
@@ -246,60 +257,55 @@ class ConceptIdentification():
         total_filters = np.arange(np.array(self.model.layers[node_idx].get_weights())[0].shape[-1])
         test_filters  = np.delete(total_filters, node_idxs)
 
-        layer_weights = np.array(self.model.layers[node_idx].get_weights().copy())
-		
-        occluded_weights = layer_weights.copy()
+        occluded_weights = np.array(self.model.layers[node_idx].get_weights().copy())
 
-        for j in test_filters:
-            occluded_weights[0][:,:,:,j] = 0
-            try:
-                occluded_weights[1][j] = 0
-            except: pass
+        if not base:
+            filter_idxs = node_idxs
+            for j in test_filters:
+                occluded_weights[0][:,:,:,j] = 0
+                try:
+                    occluded_weights[1][j] = 0
+                except: pass
+        else:
+            filter_idxs = total_filters
 
         if prior == 'gaussian':
-            weight_sampler = self._gaussian_sampler_(occluded_weights[0][:, :, :, mean_over], len(node_idxs)) 
-            try:
-                bias_sampler = self._gaussian_sampler_(occluded_weights[1][:, :, :, mean_over], len(node_idxs))
+            weight_sampler = self._gaussian_sampler_(occluded_weights[0][:, :, :, filter_idxs], len(filter_idxs)) 
+            try: bias_sampler = self._gaussian_sampler_(occluded_weights[1][filter_idxs], len(filter_idxs))
             except: pass
         elif prior == 'uniform':
-            weight_sampler = self._uniform_sampler_(occluded_weights[0][:, :, :, mean_over], len(node_idxs)) 
-            try:
-                bias_sampler = self._uniform_sampler_(occluded_weights[1][:, :, :, mean_over], len(node_idxs))
+            weight_sampler = self._uniform_sampler_(occluded_weights[0][:, :, :, filter_idxs], len(filter_idxs)) 
+            try: bias_sampler = self._uniform_sampler_(occluded_weights[1][filter_idxs], len(filter_idxs))
             except: pass
         else:
             raise NotImplementedError("Allowed Priors are ['gaussian', 'uniform']")
         
+
         gradlist = []
+
         for _ in range(nmontecarlo):
-
-            occluded_weights[0][:,:,:,node_idxs] = weight_sampler()
-            try:
-                occluded_weights[1][node_idxs] = bias_sampler()
+            occluded_weights[0][:,:,:,filter_idxs] = weight_sampler()
+            try: occluded_weights[1][filter_idxs] = bias_sampler()
             except: pass
-        
-            self.model.layers[node_idx].set_weights(occluded_weights)
-            model = Model(inputs = self.model.input, outputs=self.model.get_layer(concept_info['layer_name']).output)
-  
-            newmodel = Sequential()
-            newmodel.add(model)
-            newmodel.add(layers.Conv2D(1,1))
-        
-            # for ii in range(len(self.model.layers)):
-            #    newmodel.layers[ii].set_weights(self.model.layers[ii].get_weights())
-            newmodel.layers[-1].set_weights((np.ones((1, 1, len(total_filters), 1)), np.ones(1)))
 
-            nclass_grad = singlelayercam(newmodel, test_img, 
+            self.model.layers[node_idx].set_weights(occluded_weights)
+            features = self.model.get_layer(concept_info['layer_name']).output
+            exp_features = layers.Conv2D(1, 1, name='Expectation')(features)
+            model = Model(inputs = self.model.input, outputs=exp_features)
+            model.layers[-1].set_weights((np.ones((1, 1, len(total_filters), 1)), np.ones(1)))
+
+            nclass_grad = singlelayercam(model, test_img, 
                         nclasses = 1, 
                         name  = concept_info['concept_name'], 
                         st_layer_idx = -1, 
-                        end_layer_idx = -2,
+                        end_layer_idx = 1 if (len(model.layers) -3 < 0) else -3,
                         threshold = 0.5)
             gradlist.append(nclass_grad[0])
-	
+    
         try:
             del bias_sampler
         except: pass       
-        del model, newmodel
+        del model
         return np.array(gradlist)
 
 
@@ -308,14 +314,17 @@ class ConceptIdentification():
                             test_img,
                             save_all = False,
                             nmontecarlo = 4,
+                            base = False,
                             prior = 'gaussian'):
 
         actual_grad = self.flow_based_identifier(concept_info,
                                                save_path = None,
+                                               base_grad = base,
                                                test_img = test_img)
         montecarlo_grad = self.concept_robustness(concept_info,
                                               test_img,
                                               nmontecarlo=nmontecarlo,
+                                              base = base,
                                               prior = prior)
 
         if save_path:
