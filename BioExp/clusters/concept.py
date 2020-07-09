@@ -239,7 +239,8 @@ class ConceptIdentification():
                             test_img,
                             nmontecarlo = 3,
                             base = False,
-                            prior = 'gaussian'):
+                            prior = 'gaussian',
+                            compare = False):
         r"""
             test significance of each concepts
 
@@ -264,6 +265,10 @@ class ConceptIdentification():
 
         occluded_weights = deepcopy(selected_weights)
 
+        if compare: 
+            true_prediction = self.model.predict(test_img[None, ...])
+            delta_scores = []
+
         # weight occlusion
         for j in test_filters:
             occluded_weights[0][:,:,:,j] = 0
@@ -287,12 +292,18 @@ class ConceptIdentification():
 
         # robustness
         gradlist = []
+
         for _ in range(nmontecarlo):
             occluded_weights[0][:,:,:,node_idxs] = weight_sampler()
             try: occluded_weights[1][node_idxs] = bias_sampler()
             except: pass
 
             self.model.layers[node_idx].set_weights(occluded_weights)
+            if compare: 
+                occluded_prediction = self.model.predict(test_img[None, ...])
+                delta_scores.append(np.linalg.norm(true_prediction - occluded_weights))
+
+
             features = self.model.get_layer(concept_info['layer_name']).output
             exp_features = layers.Conv2D(1, 1, name='Expectation')(features)
             model = Model(inputs = self.model.input, outputs=exp_features)
@@ -310,6 +321,8 @@ class ConceptIdentification():
         except: pass       
         del model, weight_sampler
 
+        if compare:
+            return np.array(gradlist), np.mean(delta_scores)
         return np.array(gradlist)
 
 
