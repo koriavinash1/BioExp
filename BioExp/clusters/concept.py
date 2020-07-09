@@ -23,6 +23,7 @@ from keras.utils import np_utils
 from keras import layers
 from keras.models import Sequential
 import keras.backend as tf
+from copy import deepcopy
 
 import matplotlib.gridspec as gridspec
 from scipy.ndimage.measurements import label
@@ -156,8 +157,7 @@ class ConceptIdentification():
         test_filters  = np.delete(total_filters, node_idxs)
 
         if base_grad == False:
-            layer_weights = np.array(self.model.layers[node_idx].get_weights().copy())
-            occluded_weights = layer_weights.copy()
+            occluded_weights = deepcopy(np.array(self.model.layers[node_idx].get_weights()))
             for j in test_filters:
                 occluded_weights[0][:,:,:,j] = 0
                 try:
@@ -191,12 +191,15 @@ class ConceptIdentification():
 
     def _gaussian_sampler_(self, data, size, ax=-1):
         shape = np.mean(data, ax).shape + (size,)
-        # np.random.normal(loc=np.mean(data, axis=ax), scale=np.std(data, axis=ax), size=size)
         return lambda: np.std(data, -1)[..., None] * np.random.randn(*list(shape)) + np.mean(data, -1)[..., None] 
+        # return lambda: np.random.normal(np.mean(data, -1)[..., None], np.std(data, -1)[..., None], size = shape)
+
 
     def _uniform_sampler_(self, data, size, ax=-1):
         shape = np.mean(data, ax).shape + (size,)
-        return lambda: np.random.uniform(np.percentile(data, 0, -1)[..., None], np.percentile(data, 100, -1)[..., None], size = shape)
+        return lambda: np.percentile(data, 10, axis=-1)[..., None] * np.random.rand(*list(shape)) + np.percentile(data, 90, axis=-1)[..., None]
+        # return lambda: np.random.uniform(np.percentile(data, 10, axis=-1)[..., None], np.percentile(data, 90, axis=-1)[..., None], size = shape)
+
 
     def concept_distribution(self, concept_info, prior='gaussian'):
         r"""
@@ -213,7 +216,7 @@ class ConceptIdentification():
         self.model.load_weights(self.weights, by_name = True)
         node_idx  = self.get_layer_idx(concept_info['layer_name'])
 
-        layer_weights = np.array(self.model.layers[node_idx].get_weights().copy())
+        layer_weights = deepcopy(np.array(self.model.layers[node_idx].get_weights()))
         concept_weights = layer_weights[0][:,:,:, node_idxs]
 
         if prior == 'gaussian':
@@ -254,38 +257,39 @@ class ConceptIdentification():
 
         self.model.load_weights(self.weights, by_name = True)
         node_idx  = self.get_layer_idx(concept_info['layer_name'])
-        total_filters = np.arange(np.array(self.model.layers[node_idx].get_weights())[0].shape[-1])
+        selected_weights = deepcopy(np.array(self.model.layers[node_idx].get_weights()))
+
+        total_filters = np.arange(selected_weights[0].shape[-1])
         test_filters  = np.delete(total_filters, node_idxs)
 
-        occluded_weights = np.array(self.model.layers[node_idx].get_weights().copy())
+        occluded_weights = deepcopy(selected_weights)
 
-        if not base:
-            filter_idxs = node_idxs
-            for j in test_filters:
-                occluded_weights[0][:,:,:,j] = 0
-                try:
-                    occluded_weights[1][j] = 0
-                except: pass
-        else:
-            filter_idxs = total_filters
+        # weight occlusion
+        for j in test_filters:
+            occluded_weights[0][:,:,:,j] = 0
+            try: occluded_weights[1][j] = 0
+            except: pass
 
+        filter_idxs = node_idxs if not base else total_filters
+
+        # sampler defn
         if prior == 'gaussian':
-            weight_sampler = self._gaussian_sampler_(occluded_weights[0][:, :, :, filter_idxs], len(filter_idxs)) 
-            try: bias_sampler = self._gaussian_sampler_(occluded_weights[1][filter_idxs], len(filter_idxs))
+            weight_sampler = self._gaussian_sampler_(selected_weights[0][:, :, :, filter_idxs], len(node_idxs)) 
+            try: bias_sampler = self._gaussian_sampler_(selected_weights[1][filter_idxs], len(node_idxs))
             except: pass
         elif prior == 'uniform':
-            weight_sampler = self._uniform_sampler_(occluded_weights[0][:, :, :, filter_idxs], len(filter_idxs)) 
-            try: bias_sampler = self._uniform_sampler_(occluded_weights[1][filter_idxs], len(filter_idxs))
+            weight_sampler = self._uniform_sampler_(selected_weights[0][:, :, :, filter_idxs], len(node_idxs)) 
+            try: bias_sampler = self._uniform_sampler_(selected_weights[1][filter_idxs], len(node_idxs))
             except: pass
         else:
             raise NotImplementedError("Allowed Priors are ['gaussian', 'uniform']")
         
 
+        # robustness
         gradlist = []
-
         for _ in range(nmontecarlo):
-            occluded_weights[0][:,:,:,filter_idxs] = weight_sampler()
-            try: occluded_weights[1][filter_idxs] = bias_sampler()
+            occluded_weights[0][:,:,:,node_idxs] = weight_sampler()
+            try: occluded_weights[1][node_idxs] = bias_sampler()
             except: pass
 
             self.model.layers[node_idx].set_weights(occluded_weights)
@@ -302,10 +306,10 @@ class ConceptIdentification():
                         threshold = 0.5)
             gradlist.append(nclass_grad[0])
     
-        try:
-            del bias_sampler
+        try: del bias_sampler
         except: pass       
-        del model
+        del model, weight_sampler
+
         return np.array(gradlist)
 
 
@@ -319,7 +323,6 @@ class ConceptIdentification():
 
         actual_grad = self.flow_based_identifier(concept_info,
                                                save_path = None,
-                                               base_grad = base,
                                                test_img = test_img)
         montecarlo_grad = self.concept_robustness(concept_info,
                                               test_img,
@@ -330,8 +333,8 @@ class ConceptIdentification():
         if save_path:
             plt.clf()
             if save_all:
-                plt.figure(figsize=(5*(nmontecarlo + 1), 5))
-                gs = gridspec.GridSpec(1, nmontecarlo + 1)
+                plt.figure(figsize=(5*(nmontecarlo + 2), 5))
+                gs = gridspec.GridSpec(1, nmontecarlo + 2)
                 gs.update(wspace=0.025, hspace=0.05)
 
                 ax = plt.subplot(gs[0])
@@ -344,7 +347,8 @@ class ConceptIdentification():
                 ax.tick_params(bottom='off', top='off', labelbottom='off' )
                 
                 for ii in range(nmontecarlo):
-                    ax = plt.subplot(gs[ii + 1])
+                    if ii == (nmontecarlo - 1): ax = plt.subplot(gs[ii + 1: ])
+                    else: ax = plt.subplot(gs[ii + 1])
                     im = ax.imshow(np.squeeze(test_img), vmin=0, vmax=1)
                     im = ax.imshow(montecarlo_grad[ii], cmap=plt.get_cmap('jet'), vmin=0, vmax=1, alpha=0.5)
                     ax.set_xticklabels([])
@@ -353,8 +357,8 @@ class ConceptIdentification():
                     ax.set_title('sampled')
                     ax.tick_params(bottom='off', top='off', labelbottom='off')
             else:
-                plt.figure(figsize=(5*(2), 5))
-                gs = gridspec.GridSpec(1, 2)
+                plt.figure(figsize=(5*(3), 5))
+                gs = gridspec.GridSpec(1, 3)
                 gs.update(wspace=0.025, hspace=0.05)
 
                 ax = plt.subplot(gs[0])
@@ -366,7 +370,7 @@ class ConceptIdentification():
                 ax.set_title('actual')
                 ax.tick_params(bottom='off', top='off', labelbottom='off' )
                 
-                ax = plt.subplot(gs[1])
+                ax = plt.subplot(gs[1:])
                 im = ax.imshow(np.squeeze(test_img), vmin=0, vmax=1)
                 im = ax.imshow(np.mean(montecarlo_grad, axis=0), cmap=plt.get_cmap('jet'), vmin=0, vmax=1, alpha=0.5)
                 ax.set_xticklabels([])
@@ -379,6 +383,6 @@ class ConceptIdentification():
             cax = divider.append_axes("right", size="5%", pad=0.2)
             cb = plt.colorbar(im, ax=ax, cax=cax )
             os.makedirs(save_path, exist_ok = True)
-            plt.savefig(os.path.join(save_path, concept_info['concept_name'] +'{}_{}_robustness.png'.format('base' if base else 'cluster', prior)), bbox_inches='tight')
+            plt.savefig(os.path.join(save_path, concept_info['concept_name'] +'_{}_{}_robustness.png'.format('base' if base else 'cluster', prior)), bbox_inches='tight')
             
         return np.mean(montecarlo_grad, axis=0)

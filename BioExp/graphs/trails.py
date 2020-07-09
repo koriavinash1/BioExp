@@ -23,7 +23,7 @@ from pgm.representation.LinkedListBN import Graph
 class EstimateTrails(object):
     r"""
     """
-    def __init__(self, model, weights_pth, graph, root_node, metric, classinfo=None):
+    def __init__(self, model, weights_pth, graph, root_node, metric=None, ntrails= 1, classinfo=None):
         r"""
             model       : keras model architecture (keras.models.Model)
             weights_pth : saved weights path (str)
@@ -38,6 +38,7 @@ class EstimateTrails(object):
         self.root_node  = root_node
         self.metric     = metric
         self.classinfo  = classinfo
+        self.ntrails    = ntrails
         self.noutputs   = len(self.model.outputs)
         self.identifier = ConceptIdentification(self.model, self.weights, self.metric)
             
@@ -52,10 +53,7 @@ class EstimateTrails(object):
     def trails(self, start_node, end_node, image=None, gt=None, visual=True, save_path=None):
         r"""
         """
-        if visual:
-            if (image.all() and gt.all()):
-                raise ValueError("improper argument fot test_img or test_gt")
-                
+        
         ftrails = findTrails(self.root_node, start_node, end_node)
         trails = []
         trailsdescription = []
@@ -64,6 +62,8 @@ class EstimateTrails(object):
         os.makedirs(pth, exist_ok=True)
 
         for trailidx, ntrail in enumerate(ftrails.trails):
+            if trailidx >= self.ntrails: continue
+
             trail = ''
             traildescription = ''
             concept_imgs = []
@@ -81,11 +81,12 @@ class EstimateTrails(object):
                 if visual:
                     if node.info['concept_name'] == 'Input Image':
                         concept_imgs.append(image)
-                    else:
-                        concept_imgs.append(self.identifier.check_robustness(node.info, 
+                    elif not node.info['concept_name'].__contains__('class'):
+                        concept_imgs.append(self.identifier.flow_based_identifier(node.info, 
                                                        test_img = image,
-                                                       save_path = None,
-                                                       nmontecarlo = 1))
+                                                       save_path = None))
+                    else:
+                        pass
             trails.append(trail)
             trailsdescription.append(traildescription)
             visualtrails.append(concept_imgs)
