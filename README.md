@@ -2,6 +2,8 @@
 [![Build Status](https://travis-ci.org/koriavinash1/BioExp.svg?branch=master)](https://travis-ci.org/koriavinash1/BioExp)
 [![Documentation Status](https://readthedocs.org/projects/bioexp/badge/?version=latest)](https://bioexp.readthedocs.io/en/latest/?badge=latest)
 [![PyPI version](https://badge.fury.io/py/BioExp.svg)](https://badge.fury.io/py/BioExp)
+[![arXiv](https://img.shields.io/badge/arXiv-2008.06457-<COLOR>.svg)](https://arxiv.org/abs/2008.06457)
+[![arXiv](https://img.shields.io/badge/arXiv-1909.01498-<COLOR>.svg)](https://arxiv.org/abs/1909.01498)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Explaining Deep Learning Models which perform various image processing tasks in the medical images and natural images.
@@ -29,14 +31,24 @@ Explaining Deep Learning Models which perform various image processing tasks in 
 - [ ] Ante-hoc methods (Meta-Causation)
 
 # Citations
-If you use BioExp, please cite our work:
+If you use BioExp, please cite the following papers:
 
 ```
-@article{natekar2019demystifying,
-  title={Demystifying Brain Tumour Segmentation Networks: Interpretability and Uncertainty Analysis},
+@article{kori2020abstracting,
+  title={Abstracting Deep Neural Networks into Concept Graphs for Concept Level Interpretability},
+  author={Kori, Avinash and Natekar, Parth and Krishnamurthi, Ganapathy and Srinivasan, Balaji},
+  journal={arXiv preprint arXiv:2008.06457},
+  year={2020}
+}
+
+@article{natekar2020demystifying,
+  title={Demystifying Brain Tumor Segmentation Networks: Interpretability and Uncertainty Analysis},
   author={Natekar, Parth and Kori, Avinash and Krishnamurthi, Ganapathy},
-  journal={arXiv preprint arXiv:1909.01498},
-  year={2019}
+  journal={Frontiers in Computational Neuroscience},
+  volume={14},
+  pages={6},
+  year={2020},
+  publisher={Frontiers}
 }
 ```
 
