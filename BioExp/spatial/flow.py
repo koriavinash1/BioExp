@@ -39,10 +39,15 @@ def singlelayercam(model, img,
     for i  in range(nclasses):
         grads_ = visualize_cam(model, st_layer_idx, filter_indices=i, penultimate_layer_idx = end_layer_idx,  
                     seed_input = img[None, ...], backprop_modifier = modifier)
+
         if save_path:
             ax = plt.subplot(gs[i])
-            im = ax.imshow(np.squeeze(img), vmin=0, vmax=1)
-            im = ax.imshow(grads_, cmap=plt.get_cmap('jet'), alpha=0.5, vmin=0, vmax=1)
+            image = np.squeeze(img)
+            if len(image.shape) == 3:
+                im = ax.imshow(image, vmin=0, vmax=1)
+            else:
+                im = ax.imshow(image, cmap='gray', vmin=0, vmax=1)
+            im = ax.imshow(grads_, cmap=get_transparent_cmap('Greens'), vmin=0, vmax=1)
             ax.set_xticklabels([])
             ax.set_yticklabels([])
             ax.set_aspect('equal')

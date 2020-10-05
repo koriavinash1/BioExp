@@ -122,10 +122,9 @@ class Dissector():
                 try:
                     concept = concepts[:,:,i*nrows +(j+1)]
 
-                    concept = np.ma.masked_where(concept == 0, concept)
                     ax = plt.subplot(gs[i, j])
                     im = ax.imshow(np.squeeze(img), cmap='gray')
-                    im = ax.imshow(concept, alpha=0.5)
+                    im = ax.imshow(concept, cmap=get_transparent_cmap('hot_r'))
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
                     ax.set_aspect('equal')

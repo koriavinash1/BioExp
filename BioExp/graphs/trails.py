@@ -9,6 +9,7 @@ import cv2
 import pickle
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import pandas as pd
 from ..helpers.utils import *
@@ -41,7 +42,7 @@ class EstimateTrails(object):
         self.ntrails    = ntrails
         self.noutputs   = len(self.model.outputs)
         self.identifier = ConceptIdentification(self.model, self.weights, self.metric)
-            
+
     def get_layer_idx(self, layer_name):
         r"""
         """
@@ -60,6 +61,7 @@ class EstimateTrails(object):
         visualtrails = []
         pth = os.path.join(save_path, 'SN_{}__EN_{}'.format(start_node, end_node))
         os.makedirs(pth, exist_ok=True)
+
 
         for trailidx, ntrail in enumerate(ftrails.trails):
             if trailidx >= self.ntrails: continue
@@ -95,15 +97,42 @@ class EstimateTrails(object):
             print (traildescription)
 
             if visual:
+                plt.figure(figsize=(5*(len(concept_imgs) + 1), 5))
+                gs = gridspec.GridSpec(1, (len(concept_imgs) + 1))
+                gs.update(wspace=0.025, hspace=0.05)
+
                 for i, cimg in enumerate(concept_imgs):
-                    plt.subplot(1, len(concept_imgs), i+1)
-                    plt.imshow(np.squeeze(cimg), cmap='jet', vmin=0, vmax=1)
-                    plt.tick_params(axis='both', which='both', bottom=False, left=False, right=False, top=False, labelleft=False,labelbottom=False)
-                
-                    if save_path:
-                        plt.savefig(os.path.join(pth, '{}.png'.format(trailidx)), bbox_inches='tight')
+                    ax = plt.subplot(gs[i])
+                    orimage = np.squeeze(image)
+
+                    if len(orimage.shape) == 3:
+                        im = ax.imshow(orimage, vmin=0, vmax=1)
                     else:
-                        plt.show()
+                        im = ax.imshow(orimage, cmap='gray', vmin=0, vmax=1)
+                    
+                    if i > 0:
+                        cimg = np.squeeze(cimg)
+                        im = ax.imshow(cimg, cmap=get_transparent_cmap('Greens'), vmin=0, vmax=1)
+                    ax.set_xticklabels([])
+                    ax.set_yticklabels([])
+                    ax.set_aspect('equal')
+                    ax.tick_params(bottom='off', top='off', labelbottom='off' )
+
+                ax = plt.subplot(gs[i + 1])
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+                ax.set_aspect('equal')
+                ax.tick_params(bottom='off', top='off', labelbottom='off' )
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="5%", pad=0.2)
+                cb = plt.colorbar(im, ax=ax, cax=cax )
+
+
+                if save_path:
+                    os.makedirs(save_path, exist_ok = True)
+                    plt.savefig(os.path.join(pth, '{}.png'.format(trailidx)), bbox_inches='tight')
+                else:
+                    plt.show()
         
         if visual:              
             return trails, trailsdescription, visualtrails

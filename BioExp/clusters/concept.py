@@ -73,11 +73,9 @@ class ConceptIdentification():
             for j in range(ncols):
                 try:
                     concept = concepts[:,:,i*nrows +(j)]
-
-                    concept = np.ma.masked_where(concept == 0, concept)
                     ax = plt.subplot(gs[i, j])
                     im = ax.imshow(np.squeeze(img), cmap='gray')
-                    im = ax.imshow(concept, alpha=0.5, cmap = plt.cm.RdBu, vmin = 0, vmax = 3)
+                    im = ax.imshow(concept, cmap = get_transparent_cmap('hot_r'), vmin = 0, vmax = 3)
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
                     ax.set_aspect('equal')
@@ -301,7 +299,7 @@ class ConceptIdentification():
             self.model.layers[node_idx].set_weights(occluded_weights)
             if compare: 
                 occluded_prediction = self.model.predict(test_img[None, ...])
-                delta_scores.append(np.linalg.norm(true_prediction - occluded_weights))
+                delta_scores.append(np.mean((true_prediction - occluded_prediction)**2))
 
 
             features = self.model.get_layer(concept_info['layer_name']).output
@@ -332,6 +330,7 @@ class ConceptIdentification():
                             save_all = False,
                             nmontecarlo = 4,
                             base = False,
+                            compare = False,
                             prior = 'gaussian'):
 
         actual_grad = self.flow_based_identifier(concept_info,
@@ -341,7 +340,12 @@ class ConceptIdentification():
                                               test_img,
                                               nmontecarlo=nmontecarlo,
                                               base = base,
+                                              compare = compare,
                                               prior = prior)
+        if compare:
+            score = montecarlo_grad[1]
+            montecarlo_grad = montecarlo_grad[0]
+            print ("[INFO: BioExp Concept Robustness] Difference in Score {}".format(score))
 
         if save_path:
             plt.clf()
@@ -351,8 +355,8 @@ class ConceptIdentification():
                 gs.update(wspace=0.025, hspace=0.05)
 
                 ax = plt.subplot(gs[0])
-                im = ax.imshow(np.squeeze(test_img), vmin=0, vmax=1)
-                im = ax.imshow(actual_grad, cmap=plt.get_cmap('jet'), vmin=0, vmax=1, alpha=0.5)
+                im = ax.imshow(np.squeeze(test_img), cmap='gray', vmin=0, vmax=1)
+                im = ax.imshow(actual_grad, cmap=get_transparent_cmap('Greens'), vmin=0, vmax=1)
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
                 ax.set_aspect('equal')
@@ -362,8 +366,8 @@ class ConceptIdentification():
                 for ii in range(nmontecarlo):
                     if ii == (nmontecarlo - 1): ax = plt.subplot(gs[ii + 1: ])
                     else: ax = plt.subplot(gs[ii + 1])
-                    im = ax.imshow(np.squeeze(test_img), vmin=0, vmax=1)
-                    im = ax.imshow(montecarlo_grad[ii], cmap=plt.get_cmap('jet'), vmin=0, vmax=1, alpha=0.5)
+                    im = ax.imshow(np.squeeze(test_img), cmap='gray', vmin=0, vmax=1)
+                    im = ax.imshow(montecarlo_grad[ii], cmap=get_transparent_cmap('Greens'), vmin=0, vmax=1)
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
                     ax.set_aspect('equal')
@@ -375,8 +379,8 @@ class ConceptIdentification():
                 gs.update(wspace=0.025, hspace=0.05)
 
                 ax = plt.subplot(gs[0])
-                im = ax.imshow(np.squeeze(test_img), vmin=0, vmax=1)
-                im = ax.imshow(actual_grad, cmap=plt.get_cmap('jet'), vmin=0, vmax=1, alpha=0.5)
+                im = ax.imshow(np.squeeze(test_img), cmap='gray', vmin=0, vmax=1)
+                im = ax.imshow(actual_grad, cmap=get_transparent_cmap('Greens'), vmin=0, vmax=1)
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
                 ax.set_aspect('equal')
@@ -384,8 +388,8 @@ class ConceptIdentification():
                 ax.tick_params(bottom='off', top='off', labelbottom='off' )
                 
                 ax = plt.subplot(gs[1:])
-                im = ax.imshow(np.squeeze(test_img), vmin=0, vmax=1)
-                im = ax.imshow(np.mean(montecarlo_grad, axis=0), cmap=plt.get_cmap('jet'), vmin=0, vmax=1, alpha=0.5)
+                im = ax.imshow(np.squeeze(test_img), cmap='gray', vmin=0, vmax=1)
+                im = ax.imshow(np.mean(montecarlo_grad, axis=0), cmap=get_transparent_cmap('Greens'), vmin=0, vmax=1)
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
                 ax.set_aspect('equal')
