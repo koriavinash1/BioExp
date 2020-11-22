@@ -2,6 +2,7 @@
 [![Build Status](https://travis-ci.org/koriavinash1/BioExp.svg?branch=master)](https://travis-ci.org/koriavinash1/BioExp)
 [![Documentation Status](https://readthedocs.org/projects/bioexp/badge/?version=latest)](https://bioexp.readthedocs.io/en/latest/?badge=latest)
 [![PyPI version](https://badge.fury.io/py/BioExp.svg)](https://badge.fury.io/py/BioExp)
+[![Downloads](https://pepy.tech/badge/bioexp)](https://pepy.tech/project/bioexp)
 [![arXiv](https://img.shields.io/badge/arXiv-2008.06457-<COLOR>.svg)](https://arxiv.org/abs/2008.06457)
 [![arXiv](https://img.shields.io/badge/arXiv-1909.01498-<COLOR>.svg)](https://arxiv.org/abs/1909.01498)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
