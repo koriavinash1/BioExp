@@ -8,7 +8,7 @@ setuptools.setup(
      name='BioExp',  
      version='0.0.4',
      author="Avinash Kori, Parth Natekar",
-     author_email="koriavinash1@gmail.com, parth@smail.iitm.ac.in",
+     author_email="avin.kori.re@gmail.com, parth@smail.iitm.ac.in",
      description="Deep Learning model analysis toolbox",
      long_description=open("README.md").read(),
      long_description_content_type="text/markdown",
