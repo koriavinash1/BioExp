@@ -22,7 +22,7 @@ setuptools.setup(
          'pillow',
          'simpleITK',
          'opencv-python',
-         'tensorflow-gpu==1.14',
+         'tensorflow-gpu==2.6.4',
          'keras==2.1.5',
          'keras-vis',
          'lucid',
