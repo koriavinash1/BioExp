@@ -1,4 +1,4 @@
-tensorflow-gpu==1.14
+tensorflow-gpu==2.9.3
 keras==2.1.5
 ppgm==0.0.4
 sklearn
